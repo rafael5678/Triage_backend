@@ -1,23 +1,12 @@
-# TriageIA — Backend (hospital-triaje)
+# Microservicio Backend - Clasificador Predictivo de Triage
 
-Spring Boot 3 + PostgreSQL. Persistencia real de pacientes, signos y cola.
+API REST robusta desarrollada en **Java 17/21** con **Spring Boot 3** para el procesamiento, evaluación de criticidad y ordenamiento dinámico de pacientes en salas de urgencias hospitalarias.
 
-## Docker (contenedor nuevo, no usa tu `mi-postgres`)
-```bash
-docker compose up -d --build
-```
-- Postgres: contenedor **`hospital-triaje`** · puerto host **5434** · db `hospital_triaje`
-- API: **`hospital-triaje-api`** · http://localhost:8080/api/v1/triage/salud
+## Funcionalidades Clave
+- 🩺 **Clasificación Manchester Automatizada**: Asignación algorítmica de niveles I a V.
+- ⚡ **Score de Criticidad Normalizado**: Ponderación multifactorial de signos vitales.
+- 🔄 **Reevaluación Dinámica**: Reordenamiento en tiempo real ante cambios fisiológicos.
+- 🗄️ **Persistencia en PostgreSQL**: Conectividad flexible para Supabase o Render.
 
-DBeaver: host `localhost`, puerto `5434`, database `hospital_triaje`, user/password `triage`.
-
-## Render (Web Service nuevo)
-Variables:
-- `DATABASE_URL` → URI de Postgres (Render **o** Supabase Session/URI)
-- `CORS_ORIGINS` → URL de Vercel (ej. `https://tu-app.vercel.app`)
-- `PORT` lo asigna Render solo
-
-Dockerfile incluido. Health check: `/api/v1/triage/salud`
-
-Frontend: https://github.com/rafael5678/Triage_frotend-  
-SQL: https://github.com/rafael5678/Triage_base-de-datos
+## Documentación Técnica
+Revise los manuales y especificaciones detalladas en la carpeta [`docs/`](docs/).
