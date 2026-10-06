@@ -1,15 +1,23 @@
-# TriageIA — Backend (Spring Boot 3)
+# TriageIA — Backend (hospital-triaje)
 
-API REST para ingreso, scoring de criticidad (NEWS2 + matriz de lesión/enfermedad) y cola dinámica.
+Spring Boot 3 + PostgreSQL. Persistencia real de pacientes, signos y cola.
 
-El esquema SQL vive en: https://github.com/rafael5678/Triage_base-de-datos  
-Frontend: https://github.com/rafael5678/Triage_frotend-
-
-JPA está anotado, pero `ddl-auto` es `none`: las tablas las crea el script SQL, no Hibernate.
-
+## Docker (contenedor nuevo, no usa tu `mi-postgres`)
 ```bash
-mvn spring-boot:run
+docker compose up -d --build
 ```
+- Postgres: contenedor **`hospital-triaje`** · puerto host **5434** · db `hospital_triaje`
+- API: **`hospital-triaje-api`** · http://localhost:8080/api/v1/triage/salud
 
-Base: `com.hospital.triage`  
-API: `/api/v1/triage`
+DBeaver: host `localhost`, puerto `5434`, database `hospital_triaje`, user/password `triage`.
+
+## Render (Web Service nuevo)
+Variables:
+- `DATABASE_URL` → Internal Database URL de **Hospital_triage**
+- `CORS_ORIGINS` → URL de Vercel (ej. `https://tu-app.vercel.app`)
+- `PORT` lo asigna Render solo
+
+Dockerfile incluido. Health check: `/api/v1/triage/salud`
+
+Frontend: https://github.com/rafael5678/Triage_frotend-  
+SQL: https://github.com/rafael5678/Triage_base-de-datos

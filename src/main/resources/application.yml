@@ -1,18 +1,17 @@
 spring:
   application:
-    name: triage-backend
+    name: hospital-triaje-api
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/triage}
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/hospital_triaje}
     username: ${DB_USER:triage}
     password: ${DB_PASSWORD:triage}
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
     show-sql: false
 
 server:

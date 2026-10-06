@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -19,6 +21,16 @@ import java.util.UUID;
 public class TriageController {
 
     private final ColaAtencionService cola;
+
+    @GetMapping("/salud")
+    public Map<String, String> salud() {
+        return Map.of("status", "ok", "servicio", "hospital-triaje-api");
+    }
+
+    @GetMapping("/pacientes")
+    public List<PacientePriorizadoDTO> pacientes() {
+        return cola.todos();
+    }
 
     @PostMapping("/pacientes")
     @ResponseStatus(HttpStatus.CREATED)

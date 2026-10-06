@@ -1,0 +1,38 @@
+name: hospital-triaje
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hospital-triaje
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hospital_triaje
+      POSTGRES_USER: triage
+      POSTGRES_PASSWORD: triage
+    ports:
+      - "5434:5432"
+    volumes:
+      - hospital_triaje_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U triage -d hospital_triaje"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build: .
+    container_name: hospital-triaje-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/hospital_triaje
+      DB_USER: triage
+      DB_PASSWORD: triage
+      CORS_ORIGINS: http://localhost:5173
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  hospital_triaje_pg:
