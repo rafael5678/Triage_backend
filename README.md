@@ -13,7 +13,7 @@ DBeaver: host `localhost`, puerto `5434`, database `hospital_triaje`, user/passw
 
 ## Render (Web Service nuevo)
 Variables:
-- `DATABASE_URL` → Internal Database URL de **Hospital_triage**
+- `DATABASE_URL` → URI de Postgres (Render **o** Supabase Session/URI)
 - `CORS_ORIGINS` → URL de Vercel (ej. `https://tu-app.vercel.app`)
 - `PORT` lo asigna Render solo
 

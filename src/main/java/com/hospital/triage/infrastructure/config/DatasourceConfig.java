@@ -47,9 +47,11 @@ public class DatasourceConfig {
         String userInfo = uri.getUserInfo();
         String user = userInfo.split(":", 2)[0];
         String pass = userInfo.split(":", 2).length > 1 ? userInfo.split(":", 2)[1] : "";
+        String host = uri.getHost();
         int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-        String ssl = uri.getHost() != null && uri.getHost().contains("render.com") ? "?sslmode=require" : "";
-        cfg.setJdbcUrl("jdbc:postgresql://" + uri.getHost() + ":" + port + uri.getPath() + ssl);
+        boolean remoto = host != null && !host.equals("localhost") && !host.equals("127.0.0.1") && !host.equals("db");
+        String ssl = remoto ? "?sslmode=require" : "";
+        cfg.setJdbcUrl("jdbc:postgresql://" + host + ":" + port + uri.getPath() + ssl);
         cfg.setUsername(user);
         cfg.setPassword(pass);
     }
