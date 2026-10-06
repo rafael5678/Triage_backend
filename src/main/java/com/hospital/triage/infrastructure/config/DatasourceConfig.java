@@ -27,6 +27,8 @@ public class DatasourceConfig {
         HikariConfig cfg = new HikariConfig();
         cfg.setDriverClassName("org.postgresql.Driver");
         cfg.setMaximumPoolSize(5);
+        cfg.setConnectionTimeout(30_000);
+        cfg.addDataSourceProperty("tcpKeepAlive", "true");
         if (databaseUrl != null && !databaseUrl.isBlank()) {
             aplicarRender(cfg, databaseUrl);
         } else {
@@ -49,9 +51,13 @@ public class DatasourceConfig {
         String pass = userInfo.split(":", 2).length > 1 ? userInfo.split(":", 2)[1] : "";
         String host = uri.getHost();
         int port = uri.getPort() == -1 ? 5432 : uri.getPort();
+        boolean pooler = host != null && host.contains("pooler.supabase.com");
         boolean remoto = host != null && !host.equals("localhost") && !host.equals("127.0.0.1") && !host.equals("db");
-        String ssl = remoto ? "?sslmode=require" : "";
-        cfg.setJdbcUrl("jdbc:postgresql://" + host + ":" + port + uri.getPath() + ssl);
+        String extra = remoto ? "?sslmode=require" : "";
+        if (pooler || port == 6543) {
+            extra = extra.isEmpty() ? "?prepareThreshold=0" : extra + "&prepareThreshold=0";
+        }
+        cfg.setJdbcUrl("jdbc:postgresql://" + host + ":" + port + uri.getPath() + extra);
         cfg.setUsername(user);
         cfg.setPassword(pass);
     }
