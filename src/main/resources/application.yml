@@ -20,3 +20,6 @@ server:
 app:
   cors:
     origins: ${CORS_ORIGINS:http://localhost:5173}
+  bootstrap:
+    admin-username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}

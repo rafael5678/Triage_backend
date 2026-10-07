@@ -1,5 +1,6 @@
 package com.hospital.triage.api;
 
+import com.hospital.triage.domain.exception.CredencialesInvalidasException;
 import com.hospital.triage.domain.exception.LecturaSignosInvalidosException;
 import com.hospital.triage.domain.exception.PacienteNoEncontradoException;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,16 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<Map<String, String>> unauthorized(CredencialesInvalidasException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> badArg(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+    }
 
     @ExceptionHandler(PacienteNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> notFound(PacienteNoEncontradoException ex) {
