@@ -32,16 +32,19 @@ public class DataBootstrap implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (users.count() == 0 && !adminUsername.isBlank() && !adminPassword.isBlank()) {
-            AppUser admin = new AppUser();
+        if (!adminUsername.isBlank() && !adminPassword.isBlank()) {
+            AppUser admin = users.findByUsernameIgnoreCase(adminUsername.trim()).orElseGet(AppUser::new);
+            boolean created = admin.getId() == null;
             admin.setUsername(adminUsername.trim());
             admin.setPasswordHash(encoder.encode(adminPassword));
             admin.setDisplayName("Administrador");
             admin.setRole(UserRole.ADMIN);
             admin.setActive(true);
-            admin.setCreatedAt(OffsetDateTime.now());
+            if (admin.getCreatedAt() == null) {
+                admin.setCreatedAt(OffsetDateTime.now());
+            }
             users.save(admin);
-            log.info("Cuenta administrador inicial creada: {}", adminUsername);
+            log.info(created ? "Cuenta administrador lista: {}" : "Cuenta administrador actualizada: {}", adminUsername);
         }
         if (symptoms.count() == 0) {
             List.of(
