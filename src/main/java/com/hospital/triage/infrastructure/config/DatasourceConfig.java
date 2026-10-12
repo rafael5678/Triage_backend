@@ -36,7 +36,7 @@ public class DatasourceConfig {
         cfg.setConnectionTimeout(30_000);
         cfg.addDataSourceProperty("tcpKeepAlive", "true");
         if (databaseUrl != null && !databaseUrl.isBlank()) {
-            aplicarUrl(cfg, databaseUrl);
+            aplicarUrl(cfg, databaseUrl.trim().replace("\"", ""));
         } else {
             cfg.setJdbcUrl(jdbcUrl);
             cfg.setUsername(username);
@@ -73,9 +73,10 @@ public class DatasourceConfig {
         if (pooler || port == 6543) {
             extra = extra.isEmpty() ? "?prepareThreshold=0" : extra + "&prepareThreshold=0";
         }
-        cfg.setJdbcUrl("jdbc:postgresql://" + host + ":" + port + uri.getPath() + extra);
+        String dbName = uri.getPath() == null || uri.getPath().isBlank() ? "/postgres" : uri.getPath();
+        cfg.setJdbcUrl("jdbc:postgresql://" + host + ":" + port + dbName + extra);
         cfg.setUsername(user);
         cfg.setPassword(pass);
-        log.info("JDBC host={} port={} user={}", host, port, user);
+        log.info("JDBC host={} port={} user={} db={}", host, port, user, dbName);
     }
 }
