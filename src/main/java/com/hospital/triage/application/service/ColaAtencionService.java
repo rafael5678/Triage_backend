@@ -1,5 +1,8 @@
 package com.hospital.triage.application.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hospital.triage.application.dto.AnalizarTriageDTO;
+import com.hospital.triage.application.dto.AsistenciaIaDTO;
 import com.hospital.triage.application.dto.EstadoColaTriageDTO;
 import com.hospital.triage.application.dto.IngresoPacienteDTO;
 import com.hospital.triage.application.dto.PacientePriorizadoDTO;
@@ -31,9 +34,11 @@ import java.util.UUID;
 public class ColaAtencionService {
 
     private final TriageService triageService;
+    private final GeminiTriageService gemini;
     private final PacienteRepository pacientes;
     private final SignosVitalesRepository signosRepo;
     private final EvaluacionTriageRepository evaluaciones;
+    private final ObjectMapper json;
 
     public PacientePriorizadoDTO registrarPaciente(IngresoPacienteDTO dto) {
         Paciente p = new Paciente();
@@ -62,12 +67,19 @@ public class ColaAtencionService {
         s.setRegistradoEn(OffsetDateTime.now());
         signosRepo.save(s);
 
-        var r = triageService.calcular(
+        var protocolo = triageService.calcular(
                 p.getEdad(), dto.getFrecuenciaCardiaca(), dto.getSpo2(),
                 dto.getPresionSistolica(), dto.getPresionDiastolica(),
                 dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
                 p.getLesionId(), p.getAntecedentes()
         );
+        AsistenciaIaDTO ia = gemini.asistir(
+                p.getLesionId(), p.getMotivo(), p.getAntecedentes(), p.getEdad(), p.getSexo(),
+                dto.getFrecuenciaCardiaca(), dto.getSpo2(), dto.getPresionSistolica(), dto.getPresionDiastolica(),
+                dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
+                protocolo.score().doubleValue(), protocolo.news2()
+        );
+        var r = triageService.fusionar(protocolo, ia);
 
         EvaluacionTriage ev = evaluaciones.findTopByPaciente_IdOrderByEvaluadoEnDesc(p.getId())
                 .filter(e -> e.getEstado() == EstadoAtencion.EN_ESPERA)
@@ -79,6 +91,8 @@ public class ColaAtencionService {
         ev.setEstado(EstadoAtencion.EN_ESPERA);
         ev.setNews2(r.news2());
         ev.setEvaluadoEn(OffsetDateTime.now());
+        ev.setFuenteScore(ia.isActiva() ? "HIBRIDO" : "PROTOCOLO");
+        ev.setExplicacionIa(serializarIa(ia));
         evaluaciones.save(ev);
         reordenar();
         return cola().getCola().stream()
@@ -109,6 +123,47 @@ public class ColaAtencionService {
         evaluaciones.save(ev);
         reordenar();
         return toDto(p, ev, ev.getSignos(), null);
+    }
+
+    @Transactional(readOnly = true)
+    public PacientePriorizadoDTO analizar(AnalizarTriageDTO dto) {
+        var protocolo = triageService.calcular(
+                dto.getEdad(), dto.getFrecuenciaCardiaca(), dto.getSpo2(),
+                dto.getPresionSistolica(), dto.getPresionDiastolica(),
+                dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
+                dto.getLesionId(), dto.getAntecedentes()
+        );
+        AsistenciaIaDTO ia = gemini.asistir(
+                dto.getLesionId(), dto.getMotivo(), dto.getAntecedentes(), dto.getEdad(), dto.getSexo(),
+                dto.getFrecuenciaCardiaca(), dto.getSpo2(), dto.getPresionSistolica(), dto.getPresionDiastolica(),
+                dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
+                protocolo.score().doubleValue(), protocolo.news2()
+        );
+        var r = triageService.fusionar(protocolo, ia);
+        Paciente fake = new Paciente();
+        fake.setNombre(dto.getNombre());
+        fake.setDocumento(dto.getDocumento());
+        fake.setEdad(dto.getEdad());
+        fake.setSexo(dto.getSexo());
+        fake.setLesionId(dto.getLesionId());
+        fake.setMotivo(dto.getMotivo());
+        fake.setAntecedentes(dto.getAntecedentes());
+        SignosVitales s = new SignosVitales();
+        s.setFrecuenciaCardiaca(dto.getFrecuenciaCardiaca());
+        s.setSpo2(dto.getSpo2());
+        s.setPresionSistolica(dto.getPresionSistolica());
+        s.setPresionDiastolica(dto.getPresionDiastolica());
+        s.setTemperatura(dto.getTemperatura());
+        s.setFrecuenciaRespiratoria(dto.getFrecuenciaRespiratoria());
+        EvaluacionTriage ev = new EvaluacionTriage();
+        ev.setScoreRiesgo(r.score());
+        ev.setNivelTriage(r.nivel());
+        ev.setNews2(r.news2());
+        ev.setEvaluadoEn(OffsetDateTime.now());
+        ev.setFuenteScore(ia.isActiva() ? "HIBRIDO" : "PROTOCOLO");
+        ev.setExplicacionIa(serializarIa(ia));
+        ev.setEstado(EstadoAtencion.EN_ESPERA);
+        return toDto(fake, ev, s, null);
     }
 
     @Transactional(readOnly = true)
@@ -170,11 +225,17 @@ public class ColaAtencionService {
                 .antecedentes(p.getAntecedentes())
                 .posicionCola(pos);
         if (ev != null) {
+            AsistenciaIaDTO ia = leerIa(ev.getExplicacionIa());
             b.scoreRiesgo(ev.getScoreRiesgo())
                     .nivelTriage(ev.getNivelTriage())
                     .estado(ev.getEstado())
                     .news2(ev.getNews2())
-                    .evaluadoEn(ev.getEvaluadoEn());
+                    .evaluadoEn(ev.getEvaluadoEn())
+                    .fuenteScore(ev.getFuenteScore())
+                    .iaActiva(ia.isActiva())
+                    .dangerLead(ia.getDangerLead())
+                    .meaningIa(ia.getMeaning())
+                    .razonesIa(ia.getReasons() == null ? List.of() : ia.getReasons());
         }
         if (s != null) {
             b.frecuenciaCardiaca(s.getFrecuenciaCardiaca())
@@ -185,5 +246,24 @@ public class ColaAtencionService {
                     .frecuenciaRespiratoria(s.getFrecuenciaRespiratoria());
         }
         return b.build();
+    }
+
+    private String serializarIa(AsistenciaIaDTO ia) {
+        try {
+            return json.writeValueAsString(ia);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private AsistenciaIaDTO leerIa(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return AsistenciaIaDTO.builder().activa(false).build();
+        }
+        try {
+            return json.readValue(raw, AsistenciaIaDTO.class);
+        } catch (Exception e) {
+            return AsistenciaIaDTO.builder().activa(false).build();
+        }
     }
 }

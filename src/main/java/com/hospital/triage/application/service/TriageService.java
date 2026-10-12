@@ -1,7 +1,11 @@
 package com.hospital.triage.application.service;
 
+import com.hospital.triage.application.dto.AsistenciaIaDTO;
+import com.hospital.triage.domain.entity.Symptom;
 import com.hospital.triage.domain.enums.NivelTriage;
 import com.hospital.triage.domain.exception.LecturaSignosInvalidosException;
+import com.hospital.triage.infrastructure.persistence.SymptomRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -10,10 +14,13 @@ import java.util.Map;
 
 /**
  * Matriz de riesgo inmediato: NEWS2 + gravedad de lesión/enfermedad + comorbilidades.
- * El score continuo (0–100) alimenta el reordenamiento dinámico de la cola.
+ * Gemini puede subir el puntaje, nunca bajarlo por debajo del protocolo.
  */
 @Service
+@RequiredArgsConstructor
 public class TriageService {
+
+    private final SymptomRepository symptoms;
 
     private static final Map<String, Integer> GRAVEDAD_LESION = Map.ofEntries(
             Map.entry("paro", 99),
@@ -41,7 +48,7 @@ public class TriageService {
         validar(fc, spo2, pas, pad, temp, fr);
         int news = news2(fr, spo2, temp.doubleValue(), pas, fc);
         double shock = fc / (double) Math.max(40, pas);
-        int lesion = GRAVEDAD_LESION.getOrDefault(lesionId == null ? "" : lesionId, 40);
+        int lesion = gravedadLesion(lesionId);
         int comorb = puntuarAntecedentes(antecedentes);
 
         double score = lesion * 0.38 + (news / 20.0) * 100 * 0.42
@@ -58,6 +65,27 @@ public class TriageService {
         score = Math.min(100, Math.max(0, score));
         BigDecimal rounded = BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);
         return new ResultadoCriticidad(rounded, nivelDe(score), news);
+    }
+
+    public ResultadoCriticidad fusionar(ResultadoCriticidad protocolo, AsistenciaIaDTO ia) {
+        if (ia == null || !ia.isActiva() || ia.getScoreSugerido() == null) {
+            return protocolo;
+        }
+        double base = protocolo.score().doubleValue();
+        double suggested = Math.min(100, Math.max(0, ia.getScoreSugerido()));
+        double extra = Math.max(0, suggested - base);
+        double fused = Math.min(100, base + Math.min(15, extra));
+        BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
+        return new ResultadoCriticidad(rounded, nivelDe(fused), protocolo.news2());
+    }
+
+    private int gravedadLesion(String lesionId) {
+        if (lesionId == null || lesionId.isBlank()) {
+            return 40;
+        }
+        return symptoms.findById(lesionId)
+                .map(Symptom::getSeverity)
+                .orElseGet(() -> GRAVEDAD_LESION.getOrDefault(lesionId, 40));
     }
 
     private void validar(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {
@@ -111,8 +139,10 @@ public class TriageService {
         if (t.contains("falla") || t.contains("icc")) p += 9;
         if (t.contains("epoc") || t.contains("asma")) p += 8;
         if (t.contains("renal")) p += 7;
-        if (t.contains("diabetes")) p += 4;
-        if (t.contains("hipertens")) p += 3;
+        if (t.contains("diabetes") || t.contains("dm")) p += 4;
+        if (t.contains("hipertens") || t.contains("hta")) p += 3;
+        if (t.contains("cancer")) p += 6;
+        if (t.contains("inmuno") || t.contains("quimio") || t.contains("vih")) p += 7;
         return p;
     }
 

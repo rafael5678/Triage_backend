@@ -1,11 +1,13 @@
 package com.hospital.triage.api;
 
+import com.hospital.triage.application.dto.AnalizarTriageDTO;
 import com.hospital.triage.application.dto.EstadoColaTriageDTO;
 import com.hospital.triage.application.dto.IngresoPacienteDTO;
 import com.hospital.triage.application.dto.PacientePriorizadoDTO;
 import com.hospital.triage.application.dto.ReevaluacionDTO;
 import com.hospital.triage.application.dto.RegistroSignosVitalesDTO;
 import com.hospital.triage.application.service.ColaAtencionService;
+import com.hospital.triage.application.service.GeminiTriageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,10 +23,20 @@ import java.util.UUID;
 public class TriageController {
 
     private final ColaAtencionService cola;
+    private final GeminiTriageService gemini;
 
     @GetMapping("/salud")
     public Map<String, String> salud() {
-        return Map.of("status", "ok", "servicio", "hospital-triaje-api");
+        return Map.of(
+                "status", "ok",
+                "servicio", "hospital-triaje-api",
+                "ia", gemini.configured() ? "gemini" : "inactiva"
+        );
+    }
+
+    @PostMapping("/analizar")
+    public PacientePriorizadoDTO analizar(@Valid @RequestBody AnalizarTriageDTO dto) {
+        return cola.analizar(dto);
     }
 
     @GetMapping("/pacientes")

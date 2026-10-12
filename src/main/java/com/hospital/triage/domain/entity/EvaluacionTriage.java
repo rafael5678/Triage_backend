@@ -49,4 +49,10 @@ public class EvaluacionTriage {
 
     @Column(name = "evaluado_en", nullable = false)
     private OffsetDateTime evaluadoEn = OffsetDateTime.now();
+
+    @Column(name = "fuente_score", length = 24)
+    private String fuenteScore;
+
+    @Column(name = "explicacion_ia", length = 4000)
+    private String explicacionIa;
 }

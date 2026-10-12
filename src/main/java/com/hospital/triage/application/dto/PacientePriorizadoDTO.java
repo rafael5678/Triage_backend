@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -36,4 +38,10 @@ public class PacientePriorizadoDTO {
     private Integer presionDiastolica;
     private BigDecimal temperatura;
     private Integer frecuenciaRespiratoria;
+    private String fuenteScore;
+    private Boolean iaActiva;
+    private String dangerLead;
+    private String meaningIa;
+    @lombok.Builder.Default
+    private List<String> razonesIa = new ArrayList<>();
 }
