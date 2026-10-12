@@ -48,4 +48,7 @@ public class AnalizarTriageDTO {
 
     @NotNull @Min(4) @Max(60)
     private Integer frecuenciaRespiratoria;
+
+    /** Score of the in-browser boosting model trained on the hospital dataset. */
+    private Double scoreModeloLocal;
 }

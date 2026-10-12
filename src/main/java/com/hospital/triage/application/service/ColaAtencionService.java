@@ -77,8 +77,11 @@ public class ColaAtencionService {
                 p.getLesionId(), p.getMotivo(), p.getAntecedentes(), p.getEdad(), p.getSexo(),
                 dto.getFrecuenciaCardiaca(), dto.getSpo2(), dto.getPresionSistolica(), dto.getPresionDiastolica(),
                 dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
-                protocolo.score().doubleValue(), protocolo.news2()
+                protocolo.score().doubleValue(), protocolo.news2(), null
         );
+        if (ia.getScoreProtocolo() == null) {
+            ia.setScoreProtocolo(protocolo.score().doubleValue());
+        }
         var r = triageService.fusionar(protocolo, ia);
 
         EvaluacionTriage ev = evaluaciones.findTopByPaciente_IdOrderByEvaluadoEnDesc(p.getId())
@@ -137,8 +140,11 @@ public class ColaAtencionService {
                 dto.getLesionId(), dto.getMotivo(), dto.getAntecedentes(), dto.getEdad(), dto.getSexo(),
                 dto.getFrecuenciaCardiaca(), dto.getSpo2(), dto.getPresionSistolica(), dto.getPresionDiastolica(),
                 dto.getTemperatura(), dto.getFrecuenciaRespiratoria(),
-                protocolo.score().doubleValue(), protocolo.news2()
+                protocolo.score().doubleValue(), protocolo.news2(), dto.getScoreModeloLocal()
         );
+        if (ia.getScoreProtocolo() == null) {
+            ia.setScoreProtocolo(protocolo.score().doubleValue());
+        }
         var r = triageService.fusionar(protocolo, ia);
         Paciente fake = new Paciente();
         fake.setNombre(dto.getNombre());
@@ -235,7 +241,11 @@ public class ColaAtencionService {
                     .iaActiva(ia.isActiva())
                     .dangerLead(ia.getDangerLead())
                     .meaningIa(ia.getMeaning())
-                    .razonesIa(ia.getReasons() == null ? List.of() : ia.getReasons());
+                    .scoreProtocolo(ia.getScoreProtocolo())
+                    .scoreGemini(ia.getScoreSugerido())
+                    .razonesIa(ia.getReasons() == null ? List.of() : ia.getReasons())
+                    .razonesDataset(ia.getRazonesDataset() == null ? List.of() : ia.getRazonesDataset())
+                    .razonesGemini(ia.getRazonesGemini() == null ? List.of() : ia.getRazonesGemini());
         }
         if (s != null) {
             b.frecuenciaCardiaca(s.getFrecuenciaCardiaca())

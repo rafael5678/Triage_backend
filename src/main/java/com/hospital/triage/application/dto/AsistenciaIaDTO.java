@@ -19,4 +19,10 @@ public class AsistenciaIaDTO {
     private String meaning;
     @Builder.Default
     private List<String> reasons = new ArrayList<>();
+    @Builder.Default
+    private List<String> razonesDataset = new ArrayList<>();
+    @Builder.Default
+    private List<String> razonesGemini = new ArrayList<>();
+    private Double scoreProtocolo;
+    private Double scoreModeloLocal;
 }

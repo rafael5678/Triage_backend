@@ -73,8 +73,11 @@ public class TriageService {
         }
         double base = protocolo.score().doubleValue();
         double suggested = Math.min(100, Math.max(0, ia.getScoreSugerido()));
-        double extra = Math.max(0, suggested - base);
-        double fused = Math.min(100, base + Math.min(15, extra));
+        if (suggested <= base) {
+            return protocolo;
+        }
+        double extra = Math.min(22, suggested - base);
+        double fused = Math.min(100, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new ResultadoCriticidad(rounded, nivelDe(fused), protocolo.news2());
     }

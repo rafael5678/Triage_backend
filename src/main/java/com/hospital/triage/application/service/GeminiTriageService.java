@@ -17,7 +17,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,39 +43,46 @@ public class GeminiTriageService {
 
     public AsistenciaIaDTO asistir(String lesionId, String motivo, String antecedentes, int edad, String sexo,
                                   int fc, int spo2, int pas, int pad, BigDecimal temp, int fr,
-                                  double scoreProtocolo, int news2) {
+                                  double scoreProtocolo, int news2, Double scoreModeloLocal) {
         if (!configured()) {
             return AsistenciaIaDTO.builder().activa(false).build();
         }
         try {
-            String catalog = symptoms.findByActiveTrueOrderBySeverityDesc().stream()
-                    .limit(24)
-                    .map(s -> s.getId() + "|" + s.getLabel() + "|" + s.getSeverity())
-                    .collect(Collectors.joining("; "));
+            var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
             Symptom chosen = lesionId == null ? null : symptoms.findById(lesionId).orElse(null);
             String prompt = """
-                    Eres apoyo de triage de urgencias (ESI). No sustituyes al clínico.
-                    Usa el protocolo local Y conocimiento clínico (SCA, ACV, sepsis, anafilaxia, shock, hipoxia).
-                    El score local ya existe: no lo bajes si hay hipoxia, hipotensión, FR extrema, FC extrema o paro.
-                    Responde SOLO JSON: {"score":0-100,"dangerLead":"frase corta en español","meaning":"qué implica para la cola","reasons":["...","..."]}
-                    Máximo 5 reasons, lenguaje sencillo para personal de admisión.
+                    Eres el segundo cerebro de un triage de urgencias en español.
+                    Debes usar LAS DOS inteligencias a la vez:
+                    1) DATASET/PROTOCOLO del hospital (fórmula NEWS2, catálogo, ejemplos). No lo ignores.
+                    2) TU conocimiento clínico (ESI, SCA, ACV, sepsis, anafilaxia, shock, hipoxia, abdomen agudo).
+                    Si el relato o los signos encajan con una emergencia que el score numérico subestima, SÚBELO.
+                    Nunca bajes el score si hay hipoxia, hipotensión, FR extrema, FC extrema o paro.
+                    No inventes signos que no estén en el caso.
 
-                    Catálogo del hospital (id|texto|gravedad): %s
-                    Motivo elegido: %s (%s)
+                    Responde SOLO JSON:
+                    {"score":0-100,"dangerLead":"frase corta","meaning":"qué implica para la cola","fromDataset":["...","..."],"fromGemini":["...","..."]}
+                    fromDataset: por qué el protocolo/dataset da ese riesgo (máximo 3).
+                    fromGemini: qué aporta tu criterio clínico extra (máximo 3). Lenguaje sencillo.
+
+                    %s
+
+                    CASO ACTUAL:
+                    Motivo: %s (%s)
                     Relato: %s
                     Antecedentes: %s
                     Edad: %d  Sexo: %s
                     FC:%d  SpO2:%d  PAS:%d  PAD:%d  Temp:%s  FR:%d
-                    NEWS2:%d  Score protocolo:%s
+                    NEWS2:%d  Score del protocolo/dataset:%s  Score del modelo local entrenado:%s
                     """.formatted(
-                    catalog,
+                    HospitalDatasetPack.build(catalog),
                     lesionId == null ? "" : lesionId,
                     chosen == null ? "" : chosen.getLabel(),
                     motivo == null ? "" : motivo,
                     antecedentes == null ? "" : antecedentes,
                     edad, sexo == null ? "" : sexo,
                     fc, spo2, pas, pad, temp, fr,
-                    news2, scoreProtocolo
+                    news2, scoreProtocolo,
+                    scoreModeloLocal == null ? "no disponible" : String.valueOf(scoreModeloLocal)
             );
 
             var payload = json.createObjectNode();
@@ -110,11 +116,13 @@ public class GeminiTriageService {
                 return AsistenciaIaDTO.builder().activa(false).build();
             }
             JsonNode parsed = json.readTree(text);
+            List<String> fromDataset = texts(parsed.path("fromDataset"));
+            List<String> fromGemini = texts(parsed.path("fromGemini"));
             List<String> reasons = new ArrayList<>();
-            if (parsed.path("reasons").isArray()) {
-                parsed.path("reasons").forEach(n -> {
-                    if (n.isTextual() && !n.asText().isBlank()) reasons.add(n.asText());
-                });
+            reasons.addAll(fromDataset);
+            reasons.addAll(fromGemini);
+            if (reasons.isEmpty()) {
+                reasons.addAll(texts(parsed.path("reasons")));
             }
             return AsistenciaIaDTO.builder()
                     .activa(true)
@@ -122,10 +130,26 @@ public class GeminiTriageService {
                     .dangerLead(parsed.path("dangerLead").asText(null))
                     .meaning(parsed.path("meaning").asText(null))
                     .reasons(reasons)
+                    .razonesDataset(fromDataset)
+                    .razonesGemini(fromGemini)
+                    .scoreProtocolo(scoreProtocolo)
+                    .scoreModeloLocal(scoreModeloLocal)
                     .build();
         } catch (Exception ex) {
             log.warn("Gemini no disponible, se usa solo el protocolo: {}", ex.getMessage());
             return AsistenciaIaDTO.builder().activa(false).build();
         }
+    }
+
+    private static List<String> texts(JsonNode node) {
+        List<String> out = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            node.forEach(n -> {
+                if (n.isTextual() && !n.asText().isBlank()) {
+                    out.add(n.asText());
+                }
+            });
+        }
+        return out;
     }
 }

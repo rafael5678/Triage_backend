@@ -42,6 +42,12 @@ public class PacientePriorizadoDTO {
     private Boolean iaActiva;
     private String dangerLead;
     private String meaningIa;
+    private Double scoreProtocolo;
+    private Double scoreGemini;
     @lombok.Builder.Default
     private List<String> razonesIa = new ArrayList<>();
+    @lombok.Builder.Default
+    private List<String> razonesDataset = new ArrayList<>();
+    @lombok.Builder.Default
+    private List<String> razonesGemini = new ArrayList<>();
 }
