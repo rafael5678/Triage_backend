@@ -2,7 +2,7 @@ package com.hospital.triage.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hospital.triage.application.dto.AsistenciaIaDTO;
+import com.hospital.triage.application.dto.AiAssistDTO;
 import com.hospital.triage.domain.entity.Symptom;
 import com.hospital.triage.infrastructure.persistence.SymptomRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -41,15 +41,15 @@ public class GeminiTriageService {
         return apiKey != null && !apiKey.isBlank();
     }
 
-    public AsistenciaIaDTO asistir(String lesionId, String motivo, String antecedentes, int edad, String sexo,
-                                  int fc, int spo2, int pas, int pad, BigDecimal temp, int fr,
-                                  double scoreProtocolo, int news2, Double scoreModeloLocal) {
+    public AiAssistDTO assist(String conditionId, String reason, String history, int age, String sex,
+                              int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                              int respiratoryRate, double protocolScore, int news2, Double localModelScore) {
         if (!configured()) {
-            return AsistenciaIaDTO.builder().activa(false).build();
+            return AiAssistDTO.builder().active(false).build();
         }
         try {
             var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
-            Symptom chosen = lesionId == null ? null : symptoms.findById(lesionId).orElse(null);
+            Symptom chosen = conditionId == null ? null : symptoms.findById(conditionId).orElse(null);
             String prompt = """
                     Eres el segundo cerebro de un triage de urgencias en español.
                     Debes usar LAS DOS inteligencias a la vez:
@@ -75,14 +75,14 @@ public class GeminiTriageService {
                     NEWS2:%d  Score del protocolo/dataset:%s  Score del modelo local entrenado:%s
                     """.formatted(
                     HospitalDatasetPack.build(catalog),
-                    lesionId == null ? "" : lesionId,
+                    conditionId == null ? "" : conditionId,
                     chosen == null ? "" : chosen.getLabel(),
-                    motivo == null ? "" : motivo,
-                    antecedentes == null ? "" : antecedentes,
-                    edad, sexo == null ? "" : sexo,
-                    fc, spo2, pas, pad, temp, fr,
-                    news2, scoreProtocolo,
-                    scoreModeloLocal == null ? "no disponible" : String.valueOf(scoreModeloLocal)
+                    reason == null ? "" : reason,
+                    history == null ? "" : history,
+                    age, sex == null ? "" : sex,
+                    heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                    news2, protocolScore,
+                    localModelScore == null ? "no disponible" : String.valueOf(localModelScore)
             );
 
             var payload = json.createObjectNode();
@@ -108,12 +108,12 @@ public class GeminiTriageService {
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (res.statusCode() >= 400) {
                 log.warn("Gemini HTTP {}: {}", res.statusCode(), res.body());
-                return AsistenciaIaDTO.builder().activa(false).build();
+                return AiAssistDTO.builder().active(false).build();
             }
             JsonNode root = json.readTree(res.body());
             String text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
             if (text.isBlank()) {
-                return AsistenciaIaDTO.builder().activa(false).build();
+                return AiAssistDTO.builder().active(false).build();
             }
             JsonNode parsed = json.readTree(text);
             List<String> fromDataset = texts(parsed.path("fromDataset"));
@@ -124,20 +124,20 @@ public class GeminiTriageService {
             if (reasons.isEmpty()) {
                 reasons.addAll(texts(parsed.path("reasons")));
             }
-            return AsistenciaIaDTO.builder()
-                    .activa(true)
-                    .scoreSugerido(parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null)
+            return AiAssistDTO.builder()
+                    .active(true)
+                    .suggestedScore(parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null)
                     .dangerLead(parsed.path("dangerLead").asText(null))
                     .meaning(parsed.path("meaning").asText(null))
                     .reasons(reasons)
-                    .razonesDataset(fromDataset)
-                    .razonesGemini(fromGemini)
-                    .scoreProtocolo(scoreProtocolo)
-                    .scoreModeloLocal(scoreModeloLocal)
+                    .datasetReasons(fromDataset)
+                    .geminiReasons(fromGemini)
+                    .protocolScore(protocolScore)
+                    .localModelScore(localModelScore)
                     .build();
         } catch (Exception ex) {
             log.warn("Gemini no disponible, se usa solo el protocolo: {}", ex.getMessage());
-            return AsistenciaIaDTO.builder().activa(false).build();
+            return AiAssistDTO.builder().active(false).build();
         }
     }
 

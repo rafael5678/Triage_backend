@@ -39,29 +39,31 @@ public class AuthAdminController {
         return auth.createUser(request);
     }
 
-    @PatchMapping("/admin/users/{id}/activo")
+    @PatchMapping({"/admin/users/{id}/active", "/admin/users/{id}/activo"})
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setActive(@PathVariable UUID id, @RequestParam boolean activo) {
-        auth.setActive(id, activo);
+    public void setActive(@PathVariable UUID id, @RequestParam(value = "active", required = false) Boolean active,
+                          @RequestParam(value = "activo", required = false) Boolean activo) {
+        boolean value = active != null ? active : Boolean.TRUE.equals(activo);
+        auth.setActive(id, value);
     }
 
-    @GetMapping("/catalogo/sintomas")
+    @GetMapping({"/catalog/symptoms", "/catalogo/sintomas"})
     public List<Symptom> activeSymptoms() {
         return catalog.listActive();
     }
 
-    @GetMapping("/admin/sintomas")
+    @GetMapping({"/admin/symptoms", "/admin/sintomas"})
     public List<Symptom> allSymptoms() {
         return catalog.listAll();
     }
 
-    @PostMapping("/admin/sintomas")
+    @PostMapping({"/admin/symptoms", "/admin/sintomas"})
     @ResponseStatus(HttpStatus.CREATED)
     public Symptom saveSymptom(@Valid @RequestBody SymptomRequest request) {
         return catalog.save(request);
     }
 
-    @DeleteMapping("/admin/sintomas/{id}")
+    @DeleteMapping({"/admin/symptoms/{id}", "/admin/sintomas/{id}"})
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSymptom(@PathVariable String id) {
         catalog.delete(id);

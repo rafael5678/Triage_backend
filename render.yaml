@@ -6,7 +6,7 @@ services:
     name: hospital-triaje-api
     runtime: docker
     dockerfilePath: Dockerfile
-    healthCheckPath: /api/v1/triage/salud
+    healthCheckPath: /api/v1/triage/health
     envVars:
       - key: DATABASE_URL
         fromDatabase:

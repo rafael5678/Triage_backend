@@ -1,6 +1,7 @@
 package com.hospital.triage.domain.enums;
 
-public enum EstadoAtencion {
+/** Stored values stay stable for existing Postgres rows. */
+public enum CareStatus {
     EN_ESPERA,
     EN_ATENCION,
     ATENDIDO,

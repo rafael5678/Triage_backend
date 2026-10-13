@@ -1,9 +1,9 @@
 package com.hospital.triage.application.service;
 
-import com.hospital.triage.application.dto.AsistenciaIaDTO;
+import com.hospital.triage.application.dto.AiAssistDTO;
 import com.hospital.triage.domain.entity.Symptom;
-import com.hospital.triage.domain.enums.NivelTriage;
-import com.hospital.triage.domain.exception.LecturaSignosInvalidosException;
+import com.hospital.triage.domain.enums.TriageLevel;
+import com.hospital.triage.domain.exception.InvalidVitalSignsException;
 import com.hospital.triage.infrastructure.persistence.SymptomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,8 +13,8 @@ import java.math.RoundingMode;
 import java.util.Map;
 
 /**
- * Matriz de riesgo inmediato: NEWS2 + gravedad de lesión/enfermedad + comorbilidades.
- * Gemini puede subir el puntaje, nunca bajarlo por debajo del protocolo.
+ * Immediate-risk matrix: NEWS2 + complaint severity + comorbidities.
+ * Gemini may raise the score, never below the protocol floor.
  */
 @Service
 @RequiredArgsConstructor
@@ -22,7 +22,7 @@ public class TriageService {
 
     private final SymptomRepository symptoms;
 
-    private static final Map<String, Integer> GRAVEDAD_LESION = Map.ofEntries(
+    private static final Map<String, Integer> CONDITION_SEVERITY = Map.ofEntries(
             Map.entry("paro", 99),
             Map.entry("avc", 94),
             Map.entry("sca", 88),
@@ -41,68 +41,68 @@ public class TriageService {
             Map.entry("cura", 8)
     );
 
-    public record ResultadoCriticidad(BigDecimal score, NivelTriage nivel, int news2) {}
+    public record RiskResult(BigDecimal score, TriageLevel level, int news2) {}
 
-    public ResultadoCriticidad calcular(int edad, int fc, int spo2, int pas, int pad, BigDecimal temp, int fr,
-                                       String lesionId, String antecedentes) {
-        validar(fc, spo2, pas, pad, temp, fr);
-        int news = news2(fr, spo2, temp.doubleValue(), pas, fc);
-        double shock = fc / (double) Math.max(40, pas);
-        int lesion = gravedadLesion(lesionId);
-        int comorb = puntuarAntecedentes(antecedentes);
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history) {
+        validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
+        int news = news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate);
+        double shock = heartRate / (double) Math.max(40, systolic);
+        int condition = conditionSeverity(conditionId);
+        int comorb = scoreHistory(history);
 
-        double score = lesion * 0.38 + (news / 20.0) * 100 * 0.42
+        double score = condition * 0.38 + (news / 20.0) * 100 * 0.42
                 + Math.min(25, (shock - 0.5) * 40)
-                + Math.min(12, edad / 10.0) * 0.35
+                + Math.min(12, age / 10.0) * 0.35
                 + comorb * 0.55;
 
-        if (spo2 < 85 || pas < 80 || fr < 8 || fc > 150) {
+        if (spo2 < 85 || systolic < 80 || respiratoryRate < 8 || heartRate > 150) {
             score = Math.max(score, 86);
         }
-        if ("paro".equals(lesionId)) {
+        if ("paro".equals(conditionId)) {
             score = Math.max(score, 97);
         }
         score = Math.min(100, Math.max(0, score));
         BigDecimal rounded = BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);
-        return new ResultadoCriticidad(rounded, nivelDe(score), news);
+        return new RiskResult(rounded, levelFrom(score), news);
     }
 
-    public ResultadoCriticidad fusionar(ResultadoCriticidad protocolo, AsistenciaIaDTO ia) {
-        if (ia == null || !ia.isActiva() || ia.getScoreSugerido() == null) {
-            return protocolo;
+    public RiskResult merge(RiskResult protocol, AiAssistDTO ia) {
+        if (ia == null || !ia.isActive() || ia.getSuggestedScore() == null) {
+            return protocol;
         }
-        double base = protocolo.score().doubleValue();
-        double suggested = Math.min(100, Math.max(0, ia.getScoreSugerido()));
+        double base = protocol.score().doubleValue();
+        double suggested = Math.min(100, Math.max(0, ia.getSuggestedScore()));
         if (suggested <= base) {
-            return protocolo;
+            return protocol;
         }
         double extra = Math.min(22, suggested - base);
         double fused = Math.min(100, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
-        return new ResultadoCriticidad(rounded, nivelDe(fused), protocolo.news2());
+        return new RiskResult(rounded, levelFrom(fused), protocol.news2());
     }
 
-    private int gravedadLesion(String lesionId) {
-        if (lesionId == null || lesionId.isBlank()) {
+    private int conditionSeverity(String conditionId) {
+        if (conditionId == null || conditionId.isBlank()) {
             return 40;
         }
-        return symptoms.findById(lesionId)
+        return symptoms.findById(conditionId)
                 .map(Symptom::getSeverity)
-                .orElseGet(() -> GRAVEDAD_LESION.getOrDefault(lesionId, 40));
+                .orElseGet(() -> CONDITION_SEVERITY.getOrDefault(conditionId, 40));
     }
 
-    private void validar(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {
+    private void validate(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {
         if (spo2 < 0 || spo2 > 100) {
-            throw new LecturaSignosInvalidosException("SpO2 fuera de rango 0-100");
+            throw new InvalidVitalSignsException("SpO2 out of range 0-100");
         }
         if (temp == null) {
-            throw new LecturaSignosInvalidosException("Temperatura requerida");
+            throw new InvalidVitalSignsException("Temperature is required");
         }
         if (pas < pad) {
-            throw new LecturaSignosInvalidosException("La sistólica no puede ser menor que la diastólica");
+            throw new InvalidVitalSignsException("Systolic cannot be lower than diastolic");
         }
         if (fc < 20 || fr < 4) {
-            throw new LecturaSignosInvalidosException("Constantes vitales irreales");
+            throw new InvalidVitalSignsException("Unrealistic vital signs");
         }
     }
 
@@ -134,7 +134,7 @@ public class TriageService {
         return s;
     }
 
-    private int puntuarAntecedentes(String texto) {
+    private int scoreHistory(String texto) {
         if (texto == null) return 0;
         String t = texto.toLowerCase();
         int p = 0;
@@ -149,11 +149,11 @@ public class TriageService {
         return p;
     }
 
-    NivelTriage nivelDe(double score) {
-        if (score >= 78) return NivelTriage.TRIAGE_I_ROJO;
-        if (score >= 62) return NivelTriage.TRIAGE_II_NARANJA;
-        if (score >= 42) return NivelTriage.TRIAGE_III_AMARILLO;
-        if (score >= 22) return NivelTriage.TRIAGE_IV_VERDE;
-        return NivelTriage.TRIAGE_V_AZUL;
+    TriageLevel levelFrom(double score) {
+        if (score >= 78) return TriageLevel.TRIAGE_I_ROJO;
+        if (score >= 62) return TriageLevel.TRIAGE_II_NARANJA;
+        if (score >= 42) return TriageLevel.TRIAGE_III_AMARILLO;
+        if (score >= 22) return TriageLevel.TRIAGE_IV_VERDE;
+        return TriageLevel.TRIAGE_V_AZUL;
     }
 }

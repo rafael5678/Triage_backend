@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Entity
 @Table(name = "signos_vitales")
-public class SignosVitales {
+public class VitalSigns {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -22,26 +22,26 @@ public class SignosVitales {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id")
-    private Paciente paciente;
+    private Patient patient;
 
     @Column(name = "frecuencia_cardiaca", nullable = false)
-    private Integer frecuenciaCardiaca;
+    private Integer heartRate;
 
     @Column(nullable = false)
     private Integer spo2;
 
     @Column(name = "pas", nullable = false)
-    private Integer presionSistolica;
+    private Integer systolic;
 
     @Column(name = "pad", nullable = false)
-    private Integer presionDiastolica;
+    private Integer diastolic;
 
     @Column(nullable = false, precision = 4, scale = 1)
-    private BigDecimal temperatura;
+    private BigDecimal temperature;
 
     @Column(name = "frecuencia_respiratoria", nullable = false)
-    private Integer frecuenciaRespiratoria;
+    private Integer respiratoryRate;
 
     @Column(name = "registrado_en", nullable = false)
-    private OffsetDateTime registradoEn = OffsetDateTime.now();
+    private OffsetDateTime recordedAt = OffsetDateTime.now();
 }

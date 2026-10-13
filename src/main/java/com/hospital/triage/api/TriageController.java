@@ -1,13 +1,13 @@
 package com.hospital.triage.api;
 
-import com.hospital.triage.application.dto.AnalizarTriageDTO;
-import com.hospital.triage.application.dto.EstadoColaTriageDTO;
-import com.hospital.triage.application.dto.IngresoPacienteDTO;
-import com.hospital.triage.application.dto.PacientePriorizadoDTO;
-import com.hospital.triage.application.dto.ReevaluacionDTO;
-import com.hospital.triage.application.dto.RegistroSignosVitalesDTO;
-import com.hospital.triage.application.service.ColaAtencionService;
+import com.hospital.triage.application.dto.AnalyzeTriageDTO;
+import com.hospital.triage.application.dto.PatientIntakeDTO;
+import com.hospital.triage.application.dto.QueueStateDTO;
+import com.hospital.triage.application.dto.RankedPatientDTO;
+import com.hospital.triage.application.dto.ReassessmentDTO;
+import com.hospital.triage.application.dto.VitalSignsDTO;
 import com.hospital.triage.application.service.GeminiTriageService;
+import com.hospital.triage.application.service.QueueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,51 +22,51 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TriageController {
 
-    private final ColaAtencionService cola;
+    private final QueueService queue;
     private final GeminiTriageService gemini;
 
-    @GetMapping("/salud")
-    public Map<String, String> salud() {
+    @GetMapping({"/health", "/salud"})
+    public Map<String, String> health() {
         return Map.of(
                 "status", "ok",
-                "servicio", "hospital-triaje-api",
-                "ia", gemini.configured() ? "gemini" : "inactiva"
+                "service", "hospital-triaje-api",
+                "ai", gemini.configured() ? "gemini" : "inactive"
         );
     }
 
-    @PostMapping("/analizar")
-    public PacientePriorizadoDTO analizar(@Valid @RequestBody AnalizarTriageDTO dto) {
-        return cola.analizar(dto);
+    @PostMapping({"/analyze", "/analizar"})
+    public RankedPatientDTO analyze(@Valid @RequestBody AnalyzeTriageDTO dto) {
+        return queue.analyze(dto);
     }
 
-    @GetMapping("/pacientes")
-    public List<PacientePriorizadoDTO> pacientes() {
-        return cola.todos();
+    @GetMapping({"/patients", "/pacientes"})
+    public List<RankedPatientDTO> patients() {
+        return queue.all();
     }
 
-    @PostMapping("/pacientes")
+    @PostMapping({"/patients", "/pacientes"})
     @ResponseStatus(HttpStatus.CREATED)
-    public PacientePriorizadoDTO registrar(@Valid @RequestBody IngresoPacienteDTO dto) {
-        return cola.registrarPaciente(dto);
+    public RankedPatientDTO register(@Valid @RequestBody PatientIntakeDTO dto) {
+        return queue.registerPatient(dto);
     }
 
-    @PostMapping("/evaluaciones")
-    public PacientePriorizadoDTO evaluar(@Valid @RequestBody RegistroSignosVitalesDTO dto) {
-        return cola.evaluar(dto);
+    @PostMapping({"/evaluations", "/evaluaciones"})
+    public RankedPatientDTO evaluate(@Valid @RequestBody VitalSignsDTO dto) {
+        return queue.evaluate(dto);
     }
 
-    @PutMapping("/evaluaciones/{pacienteId}/reevaluar")
-    public PacientePriorizadoDTO reevaluar(@PathVariable UUID pacienteId, @Valid @RequestBody ReevaluacionDTO dto) {
-        return cola.reevaluar(pacienteId, dto);
+    @PutMapping({"/evaluations/{patientId}/reassess", "/evaluaciones/{patientId}/reevaluar"})
+    public RankedPatientDTO reassess(@PathVariable UUID patientId, @Valid @RequestBody ReassessmentDTO dto) {
+        return queue.reassess(patientId, dto);
     }
 
-    @GetMapping("/cola")
-    public EstadoColaTriageDTO cola() {
-        return cola.cola();
+    @GetMapping({"/queue", "/cola"})
+    public QueueStateDTO queueState() {
+        return queue.queue();
     }
 
-    @PatchMapping("/atender/{pacienteId}")
-    public PacientePriorizadoDTO atender(@PathVariable UUID pacienteId) {
-        return cola.atender(pacienteId);
+    @PatchMapping({"/care/{patientId}", "/atender/{patientId}"})
+    public RankedPatientDTO startCare(@PathVariable UUID patientId) {
+        return queue.startCare(patientId);
     }
 }

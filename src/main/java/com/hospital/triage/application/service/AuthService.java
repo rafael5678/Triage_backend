@@ -4,7 +4,7 @@ import com.hospital.triage.application.dto.CreateUserRequest;
 import com.hospital.triage.application.dto.LoginRequest;
 import com.hospital.triage.application.dto.SessionUserDTO;
 import com.hospital.triage.domain.entity.AppUser;
-import com.hospital.triage.domain.exception.CredencialesInvalidasException;
+import com.hospital.triage.domain.exception.InvalidCredentialsException;
 import com.hospital.triage.infrastructure.persistence.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,9 +23,9 @@ public class AuthService {
 
     public SessionUserDTO login(LoginRequest request) {
         AppUser user = users.findByUsernameIgnoreCase(request.getUsername().trim())
-                .orElseThrow(CredencialesInvalidasException::new);
+                .orElseThrow(InvalidCredentialsException::new);
         if (!user.isActive() || !encoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new CredencialesInvalidasException();
+            throw new InvalidCredentialsException();
         }
         return toSession(user);
     }
@@ -33,7 +33,7 @@ public class AuthService {
     @Transactional
     public SessionUserDTO createUser(CreateUserRequest request) {
         if (users.existsByUsernameIgnoreCase(request.getUsername().trim())) {
-            throw new IllegalArgumentException("Ese usuario ya existe");
+            throw new IllegalArgumentException("That username already exists");
         }
         AppUser user = new AppUser();
         user.setUsername(request.getUsername().trim());
@@ -51,7 +51,7 @@ public class AuthService {
 
     @Transactional
     public void setActive(java.util.UUID id, boolean active) {
-        AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(active);
         users.save(user);
     }

@@ -1,12 +1,14 @@
-# Microservicio Backend - Clasificador Predictivo de Triage
+# Emergency triage API
 
-API REST robusta desarrollada en **Java 17/21** con **Spring Boot 3** para el procesamiento, evaluación de criticidad y ordenamiento dinámico de pacientes en salas de urgencias hospitalarias.
+Spring Boot 3.3 (Java 17) service for ESI-style scoring, queue order, auth and Gemini assist.
 
-## Funcionalidades Clave
-- 🩺 **Clasificación Manchester Automatizada**: Asignación algorítmica de niveles I a V.
-- ⚡ **Score de Criticidad Normalizado**: Ponderación multifactorial de signos vitales.
-- 🔄 **Reevaluación Dinámica**: Reordenamiento en tiempo real ante cambios fisiológicos.
-- 🗄️ **Persistencia en PostgreSQL**: Conectividad flexible para Supabase o Render.
+## Layers
 
-## Documentación Técnica
-Revise los manuales y especificaciones detalladas en la carpeta [`docs/`](docs/).
+- `api` — REST controllers
+- `application` — use cases, DTOs, services
+- `domain` — entities, enums, exceptions
+- `infrastructure` — JPA, config, bootstrap, outbound HTTP
+
+Table and column names in Postgres stay as they were so existing data keeps working.
+
+Health: `GET /api/v1/triage/health`

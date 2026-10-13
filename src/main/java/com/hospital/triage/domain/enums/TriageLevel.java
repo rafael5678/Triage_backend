@@ -1,6 +1,7 @@
 package com.hospital.triage.domain.enums;
 
-public enum NivelTriage {
+/** Stored values stay stable for existing Postgres rows. */
+public enum TriageLevel {
     TRIAGE_I_ROJO,
     TRIAGE_II_NARANJA,
     TRIAGE_III_AMARILLO,

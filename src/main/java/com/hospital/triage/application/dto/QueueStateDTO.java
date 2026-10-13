@@ -12,8 +12,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EstadoColaTriageDTO {
-    private OffsetDateTime generadoEn;
-    private int totalEnEspera;
-    private List<PacientePriorizadoDTO> cola;
+public class QueueStateDTO {
+    private OffsetDateTime generatedAt;
+    private int waitingCount;
+    private List<RankedPatientDTO> queue;
 }

@@ -1,8 +1,8 @@
 package com.hospital.triage.api;
 
-import com.hospital.triage.domain.exception.CredencialesInvalidasException;
-import com.hospital.triage.domain.exception.LecturaSignosInvalidosException;
-import com.hospital.triage.domain.exception.PacienteNoEncontradoException;
+import com.hospital.triage.domain.exception.InvalidCredentialsException;
+import com.hospital.triage.domain.exception.InvalidVitalSignsException;
+import com.hospital.triage.domain.exception.PatientNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,8 +14,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(CredencialesInvalidasException.class)
-    public ResponseEntity<Map<String, String>> unauthorized(CredencialesInvalidasException ex) {
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, String>> unauthorized(InvalidCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
     }
 
@@ -24,13 +24,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(PacienteNoEncontradoException.class)
-    public ResponseEntity<Map<String, String>> notFound(PacienteNoEncontradoException ex) {
+    @ExceptionHandler(PatientNotFoundException.class)
+    public ResponseEntity<Map<String, String>> notFound(PatientNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(LecturaSignosInvalidosException.class)
-    public ResponseEntity<Map<String, String>> invalid(LecturaSignosInvalidosException ex) {
+    @ExceptionHandler(InvalidVitalSignsException.class)
+    public ResponseEntity<Map<String, String>> invalid(InvalidVitalSignsException ex) {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 
@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
         String msg = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
-                .orElse("Datos inválidos");
+                .orElse("Invalid data");
         return ResponseEntity.badRequest().body(Map.of("error", msg));
     }
 }

@@ -44,7 +44,7 @@ public class DataBootstrap implements CommandLineRunner {
                 admin.setCreatedAt(OffsetDateTime.now());
             }
             users.save(admin);
-            log.info(created ? "Cuenta administrador lista: {}" : "Cuenta administrador actualizada: {}", adminUsername);
+            log.info(created ? "Admin account ready: {}" : "Admin account updated: {}", adminUsername);
         }
         if (symptoms.count() == 0) {
             List.of(
