@@ -1,0 +1,33 @@
+package com.hospital.triage.evaluation.domain.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@Entity
+@Table(name = "symptoms")
+public class Symptom {
+
+    @Id
+    @Column(length = 60)
+    private String id;
+
+    @Column(nullable = false, length = 200)
+    private String label;
+
+    @Column(length = 400)
+    private String hint;
+
+    @Column(nullable = false)
+    private int severity;
+
+    @Column(nullable = false)
+    private boolean active = true;
+}

@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ms-pacientes-auth
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/hospital_triaje}
+    username: ${DB_USER:triage}
+    password: ${DB_PASSWORD:triage}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+server:
+  port: ${PORT:8081}
+
+app:
+  cors:
+    origins: ${CORS_ORIGINS:http://localhost:5173}
+  bootstrap:
+    admin-username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:UrgenciasAdmin26}
