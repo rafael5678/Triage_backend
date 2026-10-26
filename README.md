@@ -1,14 +1,12 @@
-# Emergency triage API
+# Triage de urgencias
 
-Spring Boot 3.3 (Java 17) service for ESI-style scoring, queue order, auth and Gemini assist.
+Cuatro microservicios Spring Boot 3.3 (Java 17). El frontend entra por REST y los servicios se llaman por gRPC.
 
-## Layers
+- `ms-pacientes-auth` — pacientes y login, REST 8081, gRPC 9081
+- `ms-evaluacion-triaje` — signos vitales y score, REST 8082, gRPC 9082
+- `ms-cola-espera` — orden de la sala, REST 8083
+- `ms-ia-recomendacion` — Gemini y catálogo, REST 8084, gRPC 9084
 
-- `api` — REST controllers
-- `application` — use cases, DTOs, services
-- `domain` — entities, enums, exceptions
-- `infrastructure` — JPA, config, bootstrap, outbound HTTP
+Detalle de puertos y arranque en `docs/ARCHITECTURE.md`.
 
-Table and column names in Postgres stay as they were so existing data keeps working.
-
-Health: `GET /api/v1/triage/health`
+Salud: `GET /api/v1/triage/health` en evaluación, cola e IA.

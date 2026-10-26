@@ -3,8 +3,7 @@ package com.hospital.triage.evaluation.application.service;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.enums.TriageLevel;
 import com.hospital.triage.common.exception.InvalidVitalSignsException;
-import com.hospital.triage.evaluation.domain.entity.Symptom;
-import com.hospital.triage.evaluation.infrastructure.persistence.SymptomRepository;
+import com.hospital.triage.evaluation.application.port.SymptomSeverityPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TriageService {
 
-    private final SymptomRepository symptoms;
+    private final SymptomSeverityPort symptoms;
 
     private static final Map<String, Integer> CONDITION_SEVERITY = Map.ofEntries(
             Map.entry("paro", 99),
@@ -86,8 +85,7 @@ public class TriageService {
         if (conditionId == null || conditionId.isBlank()) {
             return 40;
         }
-        return symptoms.findById(conditionId)
-                .map(Symptom::getSeverity)
+        return symptoms.severityOf(conditionId)
                 .orElseGet(() -> CONDITION_SEVERITY.getOrDefault(conditionId, 40));
     }
 

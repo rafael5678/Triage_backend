@@ -19,9 +19,10 @@ services:
       timeout: 5s
       retries: 12
 
-  api:
-    build: .
-    container_name: hospital-triaje-api
+  pacientes:
+    build:
+      context: .
+    container_name: ms-pacientes-auth
     depends_on:
       db:
         condition: service_healthy
@@ -30,9 +31,72 @@ services:
       DB_USER: triage
       DB_PASSWORD: triage
       CORS_ORIGINS: http://localhost:5173
-      PORT: 8080
+      MODULE: ms-pacientes-auth
+      PORT: 8081
+      GRPC_PORT: 9081
     ports:
-      - "8080:8080"
+      - "8081:8081"
+      - "9081:9081"
+
+  ia:
+    build:
+      context: .
+    container_name: ms-ia-recomendacion
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/hospital_triaje
+      DB_USER: triage
+      DB_PASSWORD: triage
+      CORS_ORIGINS: http://localhost:5173
+      MODULE: ms-ia-recomendacion
+      PORT: 8084
+      GRPC_PORT: 9084
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8084:8084"
+      - "9084:9084"
+
+  evaluacion:
+    build:
+      context: .
+    container_name: ms-evaluacion-triaje
+    depends_on:
+      db:
+        condition: service_healthy
+      pacientes:
+        condition: service_started
+      ia:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/hospital_triaje
+      DB_USER: triage
+      DB_PASSWORD: triage
+      CORS_ORIGINS: http://localhost:5173
+      MODULE: ms-evaluacion-triaje
+      PORT: 8082
+      GRPC_PORT: 9082
+      GRPC_CLIENT_PACIENTES: static://pacientes:9081
+      GRPC_CLIENT_IA: static://ia:9084
+    ports:
+      - "8082:8082"
+      - "9082:9082"
+
+  cola:
+    build:
+      context: .
+    container_name: ms-cola-espera
+    depends_on:
+      evaluacion:
+        condition: service_started
+    environment:
+      MODULE: ms-cola-espera
+      CORS_ORIGINS: http://localhost:5173
+      PORT: 8083
+      GRPC_CLIENT_EVALUACION: static://evaluacion:9082
+    ports:
+      - "8083:8083"
 
 volumes:
   hospital_triaje_pg:

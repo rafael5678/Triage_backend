@@ -3,33 +3,20 @@ package com.hospital.triage.evaluation.application.service;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.enums.TriageLevel;
 import com.hospital.triage.common.exception.InvalidVitalSignsException;
-import com.hospital.triage.evaluation.infrastructure.persistence.SymptomRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.hospital.triage.evaluation.application.port.SymptomSeverityPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class TriageServiceTest {
 
-    @Mock
-    private SymptomRepository symptoms;
-
-    private TriageService triageService;
-
-    @BeforeEach
-    void setUp() {
-        triageService = new TriageService(symptoms);
-    }
+    private final SymptomSeverityPort symptoms = id -> Optional.empty();
+    private final TriageService triageService = new TriageService(symptoms);
 
     @Test
     @DisplayName("TC-01: Cálculo determinista de NEWS2 normal (score 0)")
@@ -48,8 +35,6 @@ class TriageServiceTest {
     @Test
     @DisplayName("TC-03: Regla de seguridad de piso para condición de paro (mínimo 97)")
     void tc03_seguridadParoCardiorrespiratorio() {
-        when(symptoms.findById("paro")).thenReturn(Optional.empty());
-
         TriageService.RiskResult result = triageService.calculate(
                 55, 40, 80, 70, 40, BigDecimal.valueOf(35.0), 6, "paro", ""
         );
@@ -61,8 +46,6 @@ class TriageServiceTest {
     @Test
     @DisplayName("TC-04: Regla de seguridad para signos vitales extremos (piso mínimo 86)")
     void tc04_seguridadSignosVitalesExtremos() {
-        when(symptoms.findById("cura")).thenReturn(Optional.empty());
-
         TriageService.RiskResult result = triageService.calculate(
                 30, 155, 84, 75, 50, BigDecimal.valueOf(37.0), 7, "cura", ""
         );
@@ -74,8 +57,6 @@ class TriageServiceTest {
     @Test
     @DisplayName("TC-05: Ponderación de edad, antecedentes y comorbilidades")
     void tc05_ponderacionEdadYComorbilidades() {
-        when(symptoms.findById("cefalea")).thenReturn(Optional.empty());
-
         TriageService.RiskResult result = triageService.calculate(
                 70, 80, 98, 120, 80, BigDecimal.valueOf(36.6), 16, "cefalea", "infarto y diabetes"
         );

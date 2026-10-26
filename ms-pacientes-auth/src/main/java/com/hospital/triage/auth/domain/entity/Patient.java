@@ -1,5 +1,6 @@
 package com.hospital.triage.auth.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,4 +48,14 @@ public class Patient {
 
     @Column(name = "creado_en", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    @JsonProperty("patientId")
+    public UUID getPatientId() {
+        return id;
+    }
+
+    @JsonProperty("pacienteId")
+    public UUID getPacienteId() {
+        return id;
+    }
 }

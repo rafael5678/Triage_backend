@@ -31,7 +31,7 @@ public class EvaluationController {
                 "status", "ok",
                 "service", "ms-evaluacion-triaje",
                 "port", "8082",
-                "ai", evaluationService.isGeminiConfigured() ? "gemini" : "inactive"
+                "ai", evaluationService.aiAvailable() ? "grpc" : "inactive"
         );
     }
 

@@ -1,14 +1,10 @@
 package com.hospital.triage.queue.application.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hospital.triage.common.dto.QueueStateDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.enums.CareStatus;
 import com.hospital.triage.common.enums.TriageLevel;
-import com.hospital.triage.queue.domain.entity.Patient;
-import com.hospital.triage.queue.domain.entity.TriageEvaluation;
-import com.hospital.triage.queue.infrastructure.persistence.PatientRepository;
-import com.hospital.triage.queue.infrastructure.persistence.TriageEvaluationRepository;
+import com.hospital.triage.queue.application.port.EvaluationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,11 +15,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,16 +25,13 @@ import static org.mockito.Mockito.when;
 class QueueServiceTest {
 
     @Mock
-    private PatientRepository patients;
-
-    @Mock
-    private TriageEvaluationRepository evaluations;
+    private EvaluationPort evaluations;
 
     private QueueService queueService;
 
     @BeforeEach
     void setUp() {
-        queueService = new QueueService(patients, evaluations, new ObjectMapper());
+        queueService = new QueueService(evaluations);
     }
 
     @Test
@@ -49,32 +40,24 @@ class QueueServiceTest {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
 
-        Patient p1 = new Patient();
-        p1.setId(id1);
-        p1.setName("Paciente Leve");
+        RankedPatientDTO leve = RankedPatientDTO.builder()
+                .patientId(id1)
+                .name("Paciente Leve")
+                .riskScore(BigDecimal.valueOf(30.0))
+                .triageLevel(TriageLevel.TRIAGE_IV_VERDE)
+                .status(CareStatus.EN_ESPERA)
+                .evaluatedAt(OffsetDateTime.now().minusMinutes(10))
+                .build();
+        RankedPatientDTO critico = RankedPatientDTO.builder()
+                .patientId(id2)
+                .name("Paciente Critico")
+                .riskScore(BigDecimal.valueOf(88.0))
+                .triageLevel(TriageLevel.TRIAGE_I_ROJO)
+                .status(CareStatus.EN_ESPERA)
+                .evaluatedAt(OffsetDateTime.now().minusMinutes(5))
+                .build();
 
-        Patient p2 = new Patient();
-        p2.setId(id2);
-        p2.setName("Paciente Critico");
-
-        TriageEvaluation ev1 = new TriageEvaluation();
-        ev1.setId(UUID.randomUUID());
-        ev1.setPatient(p1);
-        ev1.setRiskScore(BigDecimal.valueOf(30.0));
-        ev1.setTriageLevel(TriageLevel.TRIAGE_IV_VERDE);
-        ev1.setStatus(CareStatus.EN_ESPERA);
-        ev1.setEvaluatedAt(OffsetDateTime.now().minusMinutes(10));
-
-        TriageEvaluation ev2 = new TriageEvaluation();
-        ev2.setId(UUID.randomUUID());
-        ev2.setPatient(p2);
-        ev2.setRiskScore(BigDecimal.valueOf(88.0));
-        ev2.setTriageLevel(TriageLevel.TRIAGE_I_ROJO);
-        ev2.setStatus(CareStatus.EN_ESPERA);
-        ev2.setEvaluatedAt(OffsetDateTime.now().minusMinutes(5));
-
-        when(evaluations.findByStatusOrderByRiskScoreDescEvaluatedAtAsc(CareStatus.EN_ESPERA))
-                .thenReturn(List.of(ev2, ev1));
+        when(evaluations.listByStatus(CareStatus.EN_ESPERA)).thenReturn(List.of(leve, critico));
 
         QueueStateDTO state = queueService.queue();
 
@@ -84,35 +67,28 @@ class QueueServiceTest {
         assertThat(queue.get(0).getQueuePosition()).isEqualTo(1);
         assertThat(queue.get(1).getName()).isEqualTo("Paciente Leve");
         assertThat(queue.get(1).getQueuePosition()).isEqualTo(2);
+        verify(evaluations).applyPositions(queue);
     }
 
     @Test
     @DisplayName("QC-02: Transición de estado a EN_ATENCION al iniciar atención")
     void qc02_transicionEstadoEnAtencion() {
         UUID patientId = UUID.randomUUID();
+        RankedPatientDTO updated = RankedPatientDTO.builder()
+                .patientId(patientId)
+                .name("Paciente Test")
+                .riskScore(BigDecimal.valueOf(70.0))
+                .triageLevel(TriageLevel.TRIAGE_II_NARANJA)
+                .status(CareStatus.EN_ATENCION)
+                .build();
 
-        Patient p = new Patient();
-        p.setId(patientId);
-        p.setName("Paciente Test");
-
-        TriageEvaluation ev = new TriageEvaluation();
-        ev.setId(UUID.randomUUID());
-        ev.setPatient(p);
-        ev.setRiskScore(BigDecimal.valueOf(70.0));
-        ev.setTriageLevel(TriageLevel.TRIAGE_II_NARANJA);
-        ev.setStatus(CareStatus.EN_ESPERA);
-        ev.setQueuePosition(1);
-
-        when(patients.findById(patientId)).thenReturn(Optional.of(p));
-        when(evaluations.findTopByPatient_IdOrderByEvaluatedAtDesc(patientId)).thenReturn(Optional.of(ev));
-        when(evaluations.findByStatusOrderByRiskScoreDescEvaluatedAtAsc(CareStatus.EN_ESPERA))
-                .thenReturn(List.of());
+        when(evaluations.updateStatus(patientId, CareStatus.EN_ATENCION)).thenReturn(updated);
+        when(evaluations.listByStatus(CareStatus.EN_ESPERA)).thenReturn(List.of());
 
         RankedPatientDTO result = queueService.startCare(patientId);
 
         assertThat(result.getStatus()).isEqualTo(CareStatus.EN_ATENCION);
-        assertThat(ev.getStatus()).isEqualTo(CareStatus.EN_ATENCION);
-        assertThat(ev.getQueuePosition()).isNull();
-        verify(evaluations).save(ev);
+        verify(evaluations).updateStatus(patientId, CareStatus.EN_ATENCION);
+        verify(evaluations).applyPositions(List.of());
     }
 }

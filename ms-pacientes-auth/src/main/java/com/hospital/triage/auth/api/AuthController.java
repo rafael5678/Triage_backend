@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -26,6 +27,11 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService auth;
+
+    @GetMapping("/health")
+    public Map<String, String> health() {
+        return Map.of("status", "ok", "service", "ms-pacientes-auth");
+    }
 
     @PostMapping("/auth/login")
     public SessionUserDTO login(@Valid @RequestBody LoginRequest request) {

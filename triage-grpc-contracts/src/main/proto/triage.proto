@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package hospital.triage.v1;
+
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "com.hospital.triage.grpc.v1";
+option java_outer_classname = "TriageProto";
+
+// Pacientes es el único dueño de la ficha. Los demás servicios preguntan por gRPC.
+service PatientLookup {
+  rpc GetPatient (PatientId) returns (PatientView);
+  rpc GetPatients (PatientIds) returns (PatientList);
+}
+
+// IA es el único dueño de Gemini y del catálogo de síntomas.
+service ClinicalAi {
+  rpc Assist (AssistRequest) returns (AssistReply);
+  rpc Health (google.protobuf.Empty) returns (AiHealth);
+  rpc SymptomSeverity (SymptomQuery) returns (SymptomSeverityReply);
+}
+
+// Evaluación es el único dueño de signos vitales y de la fila de triaje.
+// La cola ordena, pero persiste a través de este contrato.
+service EvaluationAccess {
+  rpc ListByStatus (StatusQuery) returns (RankedPatientList);
+  rpc ListAll (google.protobuf.Empty) returns (RankedPatientList);
+  rpc UpdateCareStatus (CareStatusUpdate) returns (RankedPatient);
+  rpc ApplyPositions (PositionBatch) returns (google.protobuf.Empty);
+}
+
+message PatientId {
+  string id = 1;
+}
+
+message PatientIds {
+  repeated string ids = 1;
+}
+
+message PatientView {
+  string id = 1;
+  string name = 2;
+  string document = 3;
+  int32 age = 4;
+  string sex = 5;
+  string condition_id = 6;
+  string reason = 7;
+  string history = 8;
+}
+
+message PatientList {
+  repeated PatientView patients = 1;
+}
+
+message AssistRequest {
+  string condition_id = 1;
+  string reason = 2;
+  string history = 3;
+  int32 age = 4;
+  string sex = 5;
+  int32 heart_rate = 6;
+  int32 spo2 = 7;
+  int32 systolic = 8;
+  int32 diastolic = 9;
+  double temperature = 10;
+  int32 respiratory_rate = 11;
+  double protocol_score = 12;
+  int32 news2 = 13;
+  optional double local_model_score = 14;
+}
+
+message AssistReply {
+  bool active = 1;
+  optional double suggested_score = 2;
+  string danger_lead = 3;
+  string meaning = 4;
+  repeated string reasons = 5;
+  repeated string dataset_reasons = 6;
+  repeated string gemini_reasons = 7;
+  optional double protocol_score = 8;
+  optional double local_model_score = 9;
+}
+
+message AiHealth {
+  bool configured = 1;
+}
+
+message SymptomQuery {
+  string condition_id = 1;
+}
+
+message SymptomSeverityReply {
+  bool found = 1;
+  int32 severity = 2;
+}
+
+message StatusQuery {
+  string status = 1;
+}
+
+message CareStatusUpdate {
+  string patient_id = 1;
+  string status = 2;
+}
+
+message QueuePosition {
+  string patient_id = 1;
+  int32 position = 2;
+}
+
+message PositionBatch {
+  repeated QueuePosition positions = 1;
+}
+
+message RankedPatientList {
+  repeated RankedPatient patients = 1;
+}
+
+message RankedPatient {
+  string patient_id = 1;
+  string name = 2;
+  string document = 3;
+  int32 age = 4;
+  string sex = 5;
+  string condition_id = 6;
+  string reason = 7;
+  string history = 8;
+  optional double risk_score = 9;
+  string triage_level = 10;
+  string status = 11;
+  optional int32 queue_position = 12;
+  optional int32 news2 = 13;
+  string evaluated_at = 14;
+  bool has_vitals = 15;
+  int32 heart_rate = 16;
+  int32 spo2 = 17;
+  int32 systolic = 18;
+  int32 diastolic = 19;
+  double temperature = 20;
+  int32 respiratory_rate = 21;
+  string score_source = 22;
+  bool ai_active = 23;
+  string danger_lead = 24;
+  string ai_meaning = 25;
+  optional double protocol_score = 26;
+  optional double gemini_score = 27;
+  repeated string ai_reasons = 28;
+  repeated string dataset_reasons = 29;
+  repeated string gemini_reasons = 30;
+}

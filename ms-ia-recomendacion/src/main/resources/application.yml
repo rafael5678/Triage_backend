@@ -21,6 +21,10 @@ spring:
 server:
   port: ${PORT:8084}
 
+grpc:
+  server:
+    port: ${GRPC_PORT:9084}
+
 app:
   cors:
     origins: ${CORS_ORIGINS:http://localhost:5173}

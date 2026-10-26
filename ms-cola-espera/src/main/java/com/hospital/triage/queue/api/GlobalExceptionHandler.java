@@ -26,6 +26,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(Map.of(
                 "timestamp", OffsetDateTime.now(),
                 "status", status.value(),
+                "error", message == null ? "" : message,
                 "message", message == null ? "" : message
         ));
     }

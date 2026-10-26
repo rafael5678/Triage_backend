@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface VitalSignsRepository extends JpaRepository<VitalSigns, UUID> {
-    List<VitalSigns> findByPatient_IdOrderByRecordedAtDesc(UUID patientId);
+    List<VitalSigns> findByPatientIdOrderByRecordedAtDesc(UUID patientId);
 }

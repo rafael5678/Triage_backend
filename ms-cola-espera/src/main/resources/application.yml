@@ -1,25 +1,12 @@
-spring:
-  application:
-    name: ms-cola-espera
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5434/hospital_triaje}
-    username: ${DB_USER:triage}
-    password: ${DB_PASSWORD:triage}
-    hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
-      connection-timeout: 20000
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: false
-
 server:
   port: ${PORT:8083}
+
+grpc:
+  client:
+    GLOBAL:
+      negotiation-type: plaintext
+    evaluacion:
+      address: ${GRPC_CLIENT_EVALUACION:static://localhost:9082}
 
 app:
   cors:

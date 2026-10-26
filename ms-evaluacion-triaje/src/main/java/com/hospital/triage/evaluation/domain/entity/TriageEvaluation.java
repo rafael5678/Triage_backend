@@ -32,9 +32,8 @@ public class TriageEvaluation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "paciente_id")
-    private Patient patient;
+    @Column(name = "paciente_id", nullable = false)
+    private UUID patientId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "signos_id")

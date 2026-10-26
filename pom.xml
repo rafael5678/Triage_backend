@@ -18,11 +18,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spring-boot.version>3.3.4</spring-boot.version>
+        <grpc.version>1.68.2</grpc.version>
+        <protobuf.version>3.25.5</protobuf.version>
+        <grpc-spring-boot.version>3.1.0.RELEASE</grpc-spring-boot.version>
     </properties>
 
     <modules>
         <module>legacy-monolith</module>
         <module>triage-common-contracts</module>
+        <module>triage-grpc-contracts</module>
         <module>ms-pacientes-auth</module>
         <module>ms-evaluacion-triaje</module>
         <module>ms-cola-espera</module>
@@ -40,11 +44,33 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Submódulo común de contratos -->
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <dependency>
                 <groupId>com.hospital</groupId>
                 <artifactId>triage-common-contracts</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hospital</groupId>
+                <artifactId>triage-grpc-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-server-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-client-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

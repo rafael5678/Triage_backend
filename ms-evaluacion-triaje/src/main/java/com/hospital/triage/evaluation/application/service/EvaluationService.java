@@ -1,89 +1,47 @@
 package com.hospital.triage.evaluation.application.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.dto.AnalyzeTriageDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.dto.ReassessmentDTO;
 import com.hospital.triage.common.dto.VitalSignsDTO;
 import com.hospital.triage.common.enums.CareStatus;
-import com.hospital.triage.common.exception.PatientNotFoundException;
-import com.hospital.triage.evaluation.domain.entity.Patient;
+import com.hospital.triage.evaluation.application.port.ClinicalAiPort;
+import com.hospital.triage.evaluation.application.port.PatientLookupPort;
+import com.hospital.triage.evaluation.application.port.PatientSnapshot;
 import com.hospital.triage.evaluation.domain.entity.TriageEvaluation;
 import com.hospital.triage.evaluation.domain.entity.VitalSigns;
-import com.hospital.triage.evaluation.infrastructure.persistence.PatientRepository;
-import com.hospital.triage.evaluation.infrastructure.persistence.TriageEvaluationRepository;
-import com.hospital.triage.evaluation.infrastructure.persistence.VitalSignsRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class EvaluationService {
 
     private final TriageService triageService;
-    private final GeminiEvaluationClient geminiClient;
-    private final PatientRepository patients;
-    private final VitalSignsRepository vitalSignsRepo;
-    private final TriageEvaluationRepository evaluations;
+    private final ClinicalAiPort clinicalAi;
+    private final PatientLookupPort patients;
+    private final EvaluationStore store;
     private final ObjectMapper json;
 
     public RankedPatientDTO evaluate(VitalSignsDTO dto) {
-        Patient p = patients.findById(dto.getPatientId())
-                .orElseThrow(() -> new PatientNotFoundException(dto.getPatientId().toString()));
-
-        VitalSigns s = new VitalSigns();
-        s.setPatient(p);
-        s.setHeartRate(dto.getHeartRate());
-        s.setSpo2(dto.getSpo2());
-        s.setSystolic(dto.getSystolic());
-        s.setDiastolic(dto.getDiastolic());
-        s.setTemperature(dto.getTemperature());
-        s.setRespiratoryRate(dto.getRespiratoryRate());
-        s.setRecordedAt(OffsetDateTime.now());
-        vitalSignsRepo.save(s);
-
+        PatientSnapshot patient = patients.require(dto.getPatientId());
+        int age = patient.age() == null ? 0 : patient.age();
         var protocol = triageService.calculate(
-                p.getAge(), dto.getHeartRate(), dto.getSpo2(),
+                age, dto.getHeartRate(), dto.getSpo2(),
                 dto.getSystolic(), dto.getDiastolic(),
                 dto.getTemperature(), dto.getRespiratoryRate(),
-                p.getConditionId(), p.getHistory()
+                patient.conditionId(), patient.history()
         );
-
-        AiAssistDTO ia = geminiClient.assist(
-                p.getConditionId(), p.getReason(), p.getHistory(), p.getAge(), p.getSex(),
-                dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
-                dto.getTemperature(), dto.getRespiratoryRate(),
-                protocol.score().doubleValue(), protocol.news2(), null
-        );
-
-        if (ia.getProtocolScore() == null) {
-            ia.setProtocolScore(protocol.score().doubleValue());
-        }
-
-        var r = triageService.merge(protocol, ia);
-
-        TriageEvaluation ev = evaluations.findTopByPatient_IdOrderByEvaluatedAtDesc(p.getId())
-                .filter(e -> e.getStatus() == CareStatus.EN_ESPERA)
-                .orElseGet(TriageEvaluation::new);
-        ev.setPatient(p);
-        ev.setVitalSigns(s);
-        ev.setRiskScore(r.score());
-        ev.setTriageLevel(r.level());
-        ev.setStatus(CareStatus.EN_ESPERA);
-        ev.setNews2(r.news2());
-        ev.setEvaluatedAt(OffsetDateTime.now());
-        ev.setScoreSource(ia.isActive() ? "HYBRID" : "PROTOCOL");
-        ev.setAiExplanation(serializeAi(ia));
-        evaluations.save(ev);
-
-        return toDto(p, ev, s, ev.getQueuePosition());
+        AiAssistDTO ia = assist(patient.conditionId(), patient.reason(), patient.history(), age, patient.sex(), dto, protocol);
+        return store.save(patient, dto, triageService.merge(protocol, ia), ia);
     }
 
     public RankedPatientDTO reassess(UUID patientId, ReassessmentDTO dto) {
@@ -98,118 +56,100 @@ public class EvaluationService {
         return evaluate(vitals);
     }
 
-    @Transactional(readOnly = true)
     public RankedPatientDTO analyze(AnalyzeTriageDTO dto) {
+        int age = dto.getAge() == null ? 0 : dto.getAge();
         var protocol = triageService.calculate(
-                dto.getAge(), dto.getHeartRate(), dto.getSpo2(),
+                age, dto.getHeartRate(), dto.getSpo2(),
                 dto.getSystolic(), dto.getDiastolic(),
                 dto.getTemperature(), dto.getRespiratoryRate(),
                 dto.getConditionId(), dto.getHistory()
         );
-
-        AiAssistDTO ia = geminiClient.assist(
-                dto.getConditionId(), dto.getReason(), dto.getHistory(), dto.getAge(), dto.getSex(),
+        AiAssistDTO ia = clinicalAi.assist(
+                dto.getConditionId(), dto.getReason(), dto.getHistory(), age, dto.getSex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
                 dto.getTemperature(), dto.getRespiratoryRate(),
                 protocol.score().doubleValue(), protocol.news2(), dto.getLocalModelScore()
         );
-
         if (ia.getProtocolScore() == null) {
             ia.setProtocolScore(protocol.score().doubleValue());
         }
+        var result = triageService.merge(protocol, ia);
 
-        var r = triageService.merge(protocol, ia);
-
-        Patient fake = new Patient();
-        fake.setName(dto.getName());
-        fake.setDocument(dto.getDocument());
-        fake.setAge(dto.getAge());
-        fake.setSex(dto.getSex());
-        fake.setConditionId(dto.getConditionId());
-        fake.setReason(dto.getReason());
-        fake.setHistory(dto.getHistory());
-
-        VitalSigns s = new VitalSigns();
-        s.setHeartRate(dto.getHeartRate());
-        s.setSpo2(dto.getSpo2());
-        s.setSystolic(dto.getSystolic());
-        s.setDiastolic(dto.getDiastolic());
-        s.setTemperature(dto.getTemperature());
-        s.setRespiratoryRate(dto.getRespiratoryRate());
-
-        TriageEvaluation ev = new TriageEvaluation();
-        ev.setRiskScore(r.score());
-        ev.setTriageLevel(r.level());
-        ev.setNews2(r.news2());
-        ev.setEvaluatedAt(OffsetDateTime.now());
-        ev.setScoreSource(ia.isActive() ? "HYBRID" : "PROTOCOL");
-        ev.setAiExplanation(serializeAi(ia));
-        ev.setStatus(CareStatus.EN_ESPERA);
-
-        return toDto(fake, ev, s, null);
+        PatientSnapshot preview = new PatientSnapshot(
+                null, dto.getName(), dto.getDocument(), dto.getAge(), dto.getSex(),
+                dto.getConditionId(), dto.getReason(), dto.getHistory());
+        VitalSigns signs = new VitalSigns();
+        signs.setHeartRate(dto.getHeartRate());
+        signs.setSpo2(dto.getSpo2());
+        signs.setSystolic(dto.getSystolic());
+        signs.setDiastolic(dto.getDiastolic());
+        signs.setTemperature(dto.getTemperature());
+        signs.setRespiratoryRate(dto.getRespiratoryRate());
+        TriageEvaluation evaluation = new TriageEvaluation();
+        evaluation.setRiskScore(result.score());
+        evaluation.setTriageLevel(result.level());
+        evaluation.setNews2(result.news2());
+        evaluation.setEvaluatedAt(OffsetDateTime.now());
+        evaluation.setScoreSource(ia.isActive() ? "HYBRID" : "PROTOCOL");
+        evaluation.setAiExplanation(RankedPatientAssembler.serializeAi(ia, json));
+        evaluation.setStatus(CareStatus.EN_ESPERA);
+        return RankedPatientAssembler.toDto(preview, evaluation, signs, null, json);
     }
 
-    public boolean isGeminiConfigured() {
-        return geminiClient.configured();
+    public boolean aiAvailable() {
+        return clinicalAi.configured();
     }
 
-    public RankedPatientDTO toDto(Patient p, TriageEvaluation ev, VitalSigns s, Integer pos) {
-        RankedPatientDTO.RankedPatientDTOBuilder b = RankedPatientDTO.builder()
-                .patientId(p.getId())
-                .name(p.getName())
-                .document(p.getDocument())
-                .age(p.getAge())
-                .sex(p.getSex())
-                .conditionId(p.getConditionId())
-                .reason(p.getReason())
-                .history(p.getHistory())
-                .queuePosition(pos);
-
-        if (ev != null) {
-            AiAssistDTO ia = readAi(ev.getAiExplanation());
-            b.riskScore(ev.getRiskScore())
-                    .triageLevel(ev.getTriageLevel())
-                    .status(ev.getStatus())
-                    .news2(ev.getNews2())
-                    .evaluatedAt(ev.getEvaluatedAt())
-                    .scoreSource(ev.getScoreSource())
-                    .aiActive(ia.isActive())
-                    .dangerLead(ia.getDangerLead())
-                    .aiMeaning(ia.getMeaning())
-                    .protocolScore(ia.getProtocolScore())
-                    .geminiScore(ia.getSuggestedScore())
-                    .aiReasons(ia.getReasons() == null ? List.of() : ia.getReasons())
-                    .datasetReasons(ia.getDatasetReasons() == null ? List.of() : ia.getDatasetReasons())
-                    .geminiReasons(ia.getGeminiReasons() == null ? List.of() : ia.getGeminiReasons());
-        }
-
-        if (s != null) {
-            b.heartRate(s.getHeartRate())
-                    .spo2(s.getSpo2())
-                    .systolic(s.getSystolic())
-                    .diastolic(s.getDiastolic())
-                    .temperature(s.getTemperature())
-                    .respiratoryRate(s.getRespiratoryRate());
-        }
-        return b.build();
+    public List<RankedPatientDTO> listByStatus(CareStatus status) {
+        return enrich(store.loadByStatus(status));
     }
 
-    private String serializeAi(AiAssistDTO ia) {
-        try {
-            return json.writeValueAsString(ia);
-        } catch (Exception e) {
-            return null;
-        }
+    public List<RankedPatientDTO> listAll() {
+        return enrich(store.loadAll());
     }
 
-    private AiAssistDTO readAi(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return AiAssistDTO.builder().active(false).build();
+    public RankedPatientDTO updateStatus(UUID patientId, CareStatus status) {
+        RankedPatientDTO updated = store.updateStatus(patientId, status);
+        enrich(List.of(updated));
+        return updated;
+    }
+
+    public void applyPositions(Map<UUID, Integer> positions) {
+        store.applyPositions(positions);
+    }
+
+    private AiAssistDTO assist(String conditionId, String reason, String history, int age, String sex,
+                               VitalSignsDTO dto, TriageService.RiskResult protocol) {
+        AiAssistDTO ia = clinicalAi.assist(
+                conditionId, reason, history, age, sex,
+                dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
+                dto.getTemperature(), dto.getRespiratoryRate(),
+                protocol.score().doubleValue(), protocol.news2(), null
+        );
+        if (ia.getProtocolScore() == null) {
+            ia.setProtocolScore(protocol.score().doubleValue());
         }
-        try {
-            return json.readValue(raw, AiAssistDTO.class);
-        } catch (Exception e) {
-            return AiAssistDTO.builder().active(false).build();
+        return ia;
+    }
+
+    private List<RankedPatientDTO> enrich(List<RankedPatientDTO> rows) {
+        List<UUID> ids = new ArrayList<>();
+        for (RankedPatientDTO row : rows) {
+            if (row.getPatientId() != null) {
+                ids.add(row.getPatientId());
+            }
         }
+        Map<UUID, PatientSnapshot> people = patients.findAll(ids);
+        for (RankedPatientDTO row : rows) {
+            PatientSnapshot person = people.getOrDefault(row.getPatientId(), PatientSnapshot.unknown(row.getPatientId()));
+            row.setName(person.name());
+            row.setDocument(person.document());
+            row.setAge(person.age());
+            row.setSex(person.sex());
+            row.setConditionId(person.conditionId());
+            row.setReason(person.reason());
+            row.setHistory(person.history());
+        }
+        return rows;
     }
 }

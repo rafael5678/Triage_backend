@@ -21,9 +21,17 @@ spring:
 server:
   port: ${PORT:8082}
 
+grpc:
+  server:
+    port: ${GRPC_PORT:9082}
+  client:
+    GLOBAL:
+      negotiation-type: plaintext
+    pacientes:
+      address: ${GRPC_CLIENT_PACIENTES:static://localhost:9081}
+    ia:
+      address: ${GRPC_CLIENT_IA:static://localhost:9084}
+
 app:
   cors:
     origins: ${CORS_ORIGINS:http://localhost:5173}
-  gemini:
-    api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.0-flash}
