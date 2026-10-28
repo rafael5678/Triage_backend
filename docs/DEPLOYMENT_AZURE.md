@@ -26,18 +26,18 @@ Si la región `westus2` no está permitida en la suscripción, se elige otra: `L
 
 El entorno se crea con workload profiles (plan Consumption), no en modo express: express no acepta ingress HTTP/2 y gRPC lo necesita.
 
-Para desplegar un cambio: push a `develop`. GitHub construye la imagen y, si existe el secreto `AZURE_CREDENTIALS`, actualiza solo los 4 servicios en Azure.
+Para desplegar un cambio: push a `develop`. GitHub construye la imagen, y la tarea `triage-autoupdate` de Azure la detecta en máximo 15 minutos y actualiza los 4 servicios.
 
-Configuración única del secreto, en Azure Cloud Shell:
+La tarea se crea una sola vez en Cloud Shell, desde la carpeta del repo:
 
 ```bash
-az ad sp create-for-rbac --name triage-github-deploy --role contributor \
-  --scopes $(az group show -n triage-brazilsouth --query id -o tsv) --json-auth
+git pull
+bash deploy/autoupdate-setup.sh
 ```
 
-El JSON que imprime va completo en GitHub: repositorio `Triage_backend` → Settings → Secrets and variables → Actions → New repository secret, con el nombre `AZURE_CREDENTIALS`.
+Usa una identidad administrada con permiso de colaborador solo sobre el grupo `triage-brazilsouth`. Las cuentas de estudiante no pueden crear aplicaciones en el directorio de la universidad (`az ad sp create-for-rbac` falla con "Insufficient privileges"); la identidad administrada no lo necesita. Fija cada servicio a la imagen por su digest (`@sha256:...`), así se sabe exactamente qué versión corre.
 
-Sin ese secreto, se actualiza a mano:
+Para actualizar a mano sin esperar:
 
 ```bash
 for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera; do
