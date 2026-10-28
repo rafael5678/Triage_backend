@@ -26,18 +26,7 @@ Si la región `westus2` no está permitida en la suscripción, se elige otra: `L
 
 El entorno se crea con workload profiles (plan Consumption), no en modo express: express no acepta ingress HTTP/2 y gRPC lo necesita.
 
-Para desplegar un cambio: push a `develop`. GitHub construye la imagen, y la tarea `triage-autoupdate` de Azure la detecta en máximo 15 minutos y actualiza los 4 servicios.
-
-La tarea se crea una sola vez en Cloud Shell, desde la carpeta del repo:
-
-```bash
-git pull
-bash deploy/autoupdate-setup.sh
-```
-
-Usa una identidad administrada con permiso de colaborador solo sobre el grupo `triage-brazilsouth`. Las cuentas de estudiante no pueden crear aplicaciones en el directorio de la universidad (`az ad sp create-for-rbac` falla con "Insufficient privileges"); la identidad administrada no lo necesita. Fija cada servicio a la imagen por su digest (`@sha256:...`), así se sabe exactamente qué versión corre.
-
-Para actualizar a mano sin esperar:
+Para desplegar un cambio: push a `develop`, esperar a que GitHub construya la imagen (unos 2 minutos) y actualizar los 4 servicios desde Cloud Shell. Las cuentas de estudiante no pueden crear el permiso que necesitaría GitHub para hacerlo solo (`az ad sp create-for-rbac` falla con "Insufficient privileges").
 
 ```bash
 for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera; do
