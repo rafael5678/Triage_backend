@@ -26,3 +26,32 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/rafael5678/triage-backend:latest
+
+  # Actualiza los 4 microservicios en Azure con la imagen nueva.
+  # Necesita el secreto AZURE_CREDENTIALS (ver docs/DEPLOYMENT_AZURE.md); sin él, este paso se salta.
+  azure:
+    needs: imagen
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      RESOURCE_GROUP: triage-brazilsouth
+    steps:
+      - name: Sin credenciales de Azure
+        if: env.AZURE_CREDENTIALS == ''
+        run: echo "Falta el secreto AZURE_CREDENTIALS; los servicios de Azure no se actualizaron."
+
+      - uses: azure/login@v2
+        if: env.AZURE_CREDENTIALS != ''
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Actualizar los 4 microservicios
+        if: env.AZURE_CREDENTIALS != ''
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors --yes
+          for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera; do
+            echo "== $app"
+            az containerapp update -n "$app" -g "$RESOURCE_GROUP" \
+              --image ghcr.io/rafael5678/triage-backend:latest \
+              --revision-suffix "gh${{ github.run_number }}-${{ github.run_attempt }}" -o none
+          done

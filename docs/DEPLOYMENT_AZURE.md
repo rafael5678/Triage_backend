@@ -26,7 +26,24 @@ Si la región `westus2` no está permitida en la suscripción, se elige otra: `L
 
 El entorno se crea con workload profiles (plan Consumption), no en modo express: express no acepta ingress HTTP/2 y gRPC lo necesita.
 
-Para desplegar un cambio: push a `develop`, esperar a que termine la acción de GitHub y volver a correr el script.
+Para desplegar un cambio: push a `develop`. GitHub construye la imagen y, si existe el secreto `AZURE_CREDENTIALS`, actualiza solo los 4 servicios en Azure.
+
+Configuración única del secreto, en Azure Cloud Shell:
+
+```bash
+az ad sp create-for-rbac --name triage-github-deploy --role contributor \
+  --scopes $(az group show -n triage-brazilsouth --query id -o tsv) --json-auth
+```
+
+El JSON que imprime va completo en GitHub: repositorio `Triage_backend` → Settings → Secrets and variables → Actions → New repository secret, con el nombre `AZURE_CREDENTIALS`.
+
+Sin ese secreto, se actualiza a mano:
+
+```bash
+for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera; do
+  az containerapp update -n $app -g triage-brazilsouth --image ghcr.io/rafael5678/triage-backend:latest --revision-suffix r$(date +%s) -o none
+done
+```
 
 ## Variables por app
 
