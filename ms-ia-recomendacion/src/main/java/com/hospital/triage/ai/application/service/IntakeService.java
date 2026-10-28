@@ -36,7 +36,7 @@ public class IntakeService {
         List<Symptom> catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Map<String, Object> known = request.getKnown() == null ? Map.of() : request.getKnown();
         boolean hasPhoto = GeminiClient.cleanBase64(request.getPhotoBase64()) != null;
-        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), 3072);
+        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), 1536);
         if (answer.isEmpty()) {
             return IntakeSuggestion.builder().active(false).build();
         }

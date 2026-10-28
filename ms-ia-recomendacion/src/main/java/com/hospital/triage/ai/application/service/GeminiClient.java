@@ -10,27 +10,72 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-/** Llamada a la API de Gemini con respuesta JSON, foto opcional y lista de modelos de respaldo. */
+/**
+ * Llamada a la API de Gemini con respuesta JSON, foto opcional y modelo de respaldo.
+ * La clave se comparte con otras aplicaciones, así que se cuida la cuota: respuestas repetidas salen
+ * de memoria, hay tope diario y por minuto, y como mucho se prueban dos modelos por pregunta.
+ */
 @Slf4j
 @Component
 public class GeminiClient {
 
+    private static final int MAX_MODELS_PER_CALL = 2;
+    private static final Duration CACHE_TTL = Duration.ofMinutes(30);
+    private static final int CACHE_SIZE = 200;
+    private static final ZoneId ZONE = ZoneId.of("America/Bogota");
+
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).build();
     private final ObjectMapper json;
+    private Clock clock = Clock.systemUTC();
 
     @Value("${app.gemini.api-key:}")
     private String apiKey;
 
-    @Value("${app.gemini.model:gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-3-flash-preview}")
+    @Value("${app.gemini.model:gemini-3.5-flash-lite,gemini-3.1-flash-lite}")
     private String model;
+
+    @Value("${app.gemini.daily-limit:150}")
+    private int dailyLimit = 150;
+
+    @Value("${app.gemini.per-minute-limit:6}")
+    private int perMinuteLimit = 6;
+
+    private record Cached(JsonNode value, Instant at) {
+    }
+
+    private final Map<String, Cached> cache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Cached> eldest) {
+            return size() > CACHE_SIZE;
+        }
+    };
+    private final ArrayDeque<Instant> lastMinute = new ArrayDeque<>();
+    private LocalDate day;
+    private int usedToday;
 
     public GeminiClient(ObjectMapper json) {
         this.json = json;
+    }
+
+    /** Llamadas reales a Gemini hechas hoy (las que salieron de memoria no cuentan). */
+    public synchronized int usedToday() {
+        rollDay();
+        return usedToday;
     }
 
     public boolean configured() {
@@ -68,8 +113,18 @@ public class GeminiClient {
             payload.set("generationConfig", gen);
             String body = json.writeValueAsString(payload);
 
+            String key = sha256(body);
+            JsonNode remembered = fromCache(key);
+            if (remembered != null) {
+                return Optional.of(remembered);
+            }
             HttpResponse<String> res = null;
             for (String candidate : models()) {
+                if (!takeQuota()) {
+                    log.warn("Tope de llamadas a Gemini alcanzado ({} por día, {} por minuto); se usa solo el protocolo",
+                            dailyLimit, perMinuteLimit);
+                    break;
+                }
                 String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidate + ":generateContent";
                 HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                         .timeout(Duration.ofSeconds(20))
@@ -101,19 +156,21 @@ public class GeminiClient {
                 log.warn("Gemini respondió sin texto: {}", root.path("candidates").path(0).path("finishReason").asText(""));
                 return Optional.empty();
             }
-            return Optional.of(json.readTree(stripFence(text)));
+            JsonNode parsed = json.readTree(stripFence(text));
+            remember(key, parsed);
+            return Optional.of(parsed);
         } catch (Exception ex) {
             log.warn("Gemini no disponible: {}", ex.getMessage());
             return Optional.empty();
         }
     }
 
-    /** GEMINI_MODEL admite varios modelos separados por coma; si uno está saturado se prueba el siguiente. */
+    /** GEMINI_MODEL admite varios modelos separados por coma; si uno está saturado se prueba el siguiente (máximo 2). */
     private List<String> models() {
         List<String> out = new ArrayList<>();
         if (model != null) {
             for (String name : model.split(",")) {
-                if (!name.isBlank()) {
+                if (!name.isBlank() && out.size() < MAX_MODELS_PER_CALL) {
                     out.add(name.trim());
                 }
             }
@@ -122,6 +179,48 @@ public class GeminiClient {
             out.add("gemini-3.5-flash-lite");
         }
         return out;
+    }
+
+    private synchronized JsonNode fromCache(String key) {
+        Cached hit = cache.get(key);
+        if (hit == null) {
+            return null;
+        }
+        if (Duration.between(hit.at(), clock.instant()).compareTo(CACHE_TTL) > 0) {
+            cache.remove(key);
+            return null;
+        }
+        return hit.value();
+    }
+
+    private synchronized void remember(String key, JsonNode value) {
+        cache.put(key, new Cached(value, clock.instant()));
+    }
+
+    private synchronized boolean takeQuota() {
+        rollDay();
+        Instant now = clock.instant();
+        while (!lastMinute.isEmpty() && Duration.between(lastMinute.peekFirst(), now).toSeconds() >= 60) {
+            lastMinute.pollFirst();
+        }
+        if (usedToday >= dailyLimit || lastMinute.size() >= perMinuteLimit) {
+            return false;
+        }
+        usedToday++;
+        lastMinute.addLast(now);
+        return true;
+    }
+
+    private void rollDay() {
+        LocalDate today = LocalDate.ofInstant(clock.instant(), ZONE);
+        if (!today.equals(day)) {
+            day = today;
+            usedToday = 0;
+        }
+    }
+
+    private static String sha256(String text) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));
     }
 
     static String cleanBase64(String raw) {

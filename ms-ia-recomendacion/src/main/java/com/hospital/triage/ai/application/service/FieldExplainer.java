@@ -32,7 +32,7 @@ public class FieldExplainer {
                 request.getValue() == null || request.getValue().isBlank() ? "(sin valor)" : request.getValue(),
                 request.getContext() == null ? "" : request.getContext()
         );
-        return gemini.generate(prompt, null, null, 1536)
+        return gemini.generate(prompt, null, null, 768)
                 .map(this::toExplanation)
                 .orElseGet(() -> FieldExplanation.builder().active(false).build());
     }

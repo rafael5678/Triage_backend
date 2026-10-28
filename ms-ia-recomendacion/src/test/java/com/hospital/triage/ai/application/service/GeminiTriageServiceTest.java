@@ -168,6 +168,56 @@ class GeminiTriageServiceTest {
         assertThat(result.getSuggestedArea()).isEqualTo("URGENCIAS");
     }
 
+    @Test
+    @DisplayName("TC-16: El mismo caso dos veces (calcular y confirmar) llama a Gemini una sola vez")
+    void tc16_casoRepetidoSaleDeMemoria() throws Exception {
+        wire("test-api-key", "modelo");
+        when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(geminiEnvelope("{\"score\": 70.0}"));
+        doReturn(mockHttpResponse).when(mockHttpClient).send(any(), any());
+
+        AiAssistDTO first = geminiService.assist(baseCase().localModelScore(55.0).build());
+        AiAssistDTO second = geminiService.assist(baseCase().localModelScore(null).build());
+
+        assertThat(first.getSuggestedScore()).isEqualTo(70.0);
+        assertThat(second.getSuggestedScore()).isEqualTo(70.0);
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(1)).send(any(), any());
+        assertThat(client.usedToday()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("TC-17: Pasado el tope por minuto no se llama a Gemini y el triaje sigue con el protocolo")
+    void tc17_topePorMinuto() throws Exception {
+        wire("test-api-key", "modelo");
+        ReflectionTestUtils.setField(client, "perMinuteLimit", 2);
+        when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(geminiEnvelope("{\"score\": 70.0}"));
+        doReturn(mockHttpResponse).when(mockHttpClient).send(any(), any());
+
+        assertThat(geminiService.assist(baseCase().age(30).build()).isActive()).isTrue();
+        assertThat(geminiService.assist(baseCase().age(31).build()).isActive()).isTrue();
+        AiAssistDTO third = geminiService.assist(baseCase().age(32).build());
+
+        assertThat(third.isActive()).isFalse();
+        assertThat(third.getProtocolScore()).isEqualTo(68.0);
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(2)).send(any(), any());
+    }
+
+    @Test
+    @DisplayName("TC-18: Aunque la lista tenga más modelos, solo se prueban dos por pregunta")
+    void tc18_maximoDosModelos() throws Exception {
+        wire("test-api-key", "uno,dos,tres,cuatro");
+        when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
+        when(mockHttpResponse.statusCode()).thenReturn(503);
+        when(mockHttpResponse.body()).thenReturn("{\"error\":{\"code\":503}}");
+        doReturn(mockHttpResponse).when(mockHttpClient).send(any(), any());
+
+        assertThat(geminiService.assist(baseCase().build()).isActive()).isFalse();
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(2)).send(any(), any());
+    }
+
     static String geminiEnvelope(String innerJson) throws Exception {
         String escaped = new ObjectMapper().writeValueAsString(innerJson);
         return "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":" + escaped + "}]}}]}";

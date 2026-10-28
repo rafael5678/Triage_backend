@@ -33,7 +33,7 @@ public class GeminiTriageService {
         var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Symptom chosen = c.conditionId() == null ? null : symptoms.findById(c.conditionId()).orElse(null);
         boolean hasPhoto = GeminiClient.cleanBase64(c.photoBase64()) != null;
-        Optional<JsonNode> answer = gemini.generate(prompt(c, catalog, chosen, hasPhoto), c.photoBase64(), c.photoMime(), 3072);
+        Optional<JsonNode> answer = gemini.generate(prompt(c, catalog, chosen, hasPhoto), c.photoBase64(), c.photoMime(), 2048);
         if (answer.isEmpty()) {
             return AiAssistDTO.builder().active(false).protocolScore(c.protocolScore()).build();
         }
@@ -103,7 +103,7 @@ public class GeminiTriageService {
                 FC:%d  SpO2:%d  PAS:%d  PAD:%d  Temp:%s  FR:%d
                 Glucosa (mg/dL): %s  Dolor 0-10: %s  Conciencia AVPU: %s
                 Signos estimados: %s
-                NEWS2:%d  Score del protocolo/dataset:%s  Score del modelo local entrenado:%s
+                NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
                 hasPhoto ? "qué se ve en la foto adjunta y qué tan grave parece (herida, quemadura, deformidad, color de piel, sangrado)" : "",
                 HospitalDatasetPack.build(catalog),
@@ -117,8 +117,7 @@ public class GeminiTriageService {
                 c.painScale() == null ? "no dicho" : c.painScale(),
                 c.consciousness() == null || c.consciousness().isBlank() ? "no dicho" : c.consciousness(),
                 estimated,
-                c.news2(), c.protocolScore(),
-                c.localModelScore() == null ? "no disponible" : String.valueOf(c.localModelScore())
+                c.news2(), c.protocolScore()
         );
     }
 }

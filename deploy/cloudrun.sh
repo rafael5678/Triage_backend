@@ -77,7 +77,8 @@ deploy ms-ia-recomendacion si "$(env_file \
   DATABASE_URL "$DATABASE_URL" \
   CORS_ORIGINS "$CORS_ORIGINS" \
   GEMINI_API_KEY "$GEMINI_API_KEY" \
-  GEMINI_MODEL "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-3-flash-preview")"
+  GEMINI_MODEL "gemini-3.5-flash-lite,gemini-3.1-flash-lite" \
+  GEMINI_DAILY_LIMIT 150)"
 IA_URL="$(url_of ms-ia-recomendacion)"
 
 echo "== 3/4 ms-evaluacion-triaje"

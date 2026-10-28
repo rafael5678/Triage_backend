@@ -28,4 +28,7 @@ app:
     origins: ${CORS_ORIGINS:http://localhost:5173}
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-3-flash-preview}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite,gemini-3.1-flash-lite}
+    # La clave se comparte con otras apps: por encima de esto el triaje sigue solo con el protocolo.
+    daily-limit: ${GEMINI_DAILY_LIMIT:150}
+    per-minute-limit: ${GEMINI_PER_MINUTE_LIMIT:6}
