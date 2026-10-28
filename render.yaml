@@ -32,9 +32,9 @@ services:
       - key: GRPC_PORT
         value: "9082"
       - key: GRPC_CLIENT_PACIENTES
-        value: static://ms-pacientes-auth:9081
+        sync: false
       - key: GRPC_CLIENT_IA
-        value: static://ms-ia-recomendacion:9084
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
@@ -49,7 +49,7 @@ services:
       - key: MODULE
         value: ms-cola-espera
       - key: GRPC_CLIENT_EVALUACION
-        value: static://ms-evaluacion-triaje:9082
+        sync: false
       - key: CORS_ORIGINS
         sync: false
 

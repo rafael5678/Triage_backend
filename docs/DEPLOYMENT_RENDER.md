@@ -28,7 +28,9 @@ Están listas para copiar en `deploy/`:
 
 `DATABASE_URL` es la cadena de Supabase. La misma en pacientes, evaluación e IA. `GEMINI_API_KEY` solo en IA. `CORS_ORIGINS` es la URL del frontend, la misma en los cuatro.
 
-gRPC no usa la URL pública `onrender.com`. Usa el nombre del otro servicio dentro de Render, como en esos archivos. Los cuatro Web Services tienen que estar en la misma región.
+gRPC no usa la URL pública `onrender.com`. Usa la dirección interna del otro servicio, que está en Connect → Internal y lleva un sufijo (por ejemplo `ms-pacientes-auth-ab12`). Los cuatro Web Services tienen que estar en la misma región.
+
+Render no deja que una instancia Free reciba tráfico de la red privada. Pacientes, evaluación e IA reciben gRPC, así que necesitan una instancia de pago. La cola solo envía y puede ser Free.
 
 En el frontend, las variables están en `Triage_frotend-/deploy/frontend.env`. Son las cuatro URLs públicas `https://...onrender.com`.
 
