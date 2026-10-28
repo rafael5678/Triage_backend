@@ -119,4 +119,36 @@ class GeminiTriageServiceTest {
         assertThat(result.getDatasetReasons()).contains("FC elevada");
         assertThat(result.getGeminiReasons()).contains("Dolor torácico irradiado a mandíbula");
     }
+
+    @Test
+    @DisplayName("TC-14: Modelo saturado (503) -> se usa el siguiente modelo de la lista")
+    void tc14_modeloSaturadoUsaElSiguiente() throws Exception {
+        ReflectionTestUtils.setField(geminiService, "apiKey", "test-api-key");
+        ReflectionTestUtils.setField(geminiService, "model", "modelo-saturado, modelo-libre");
+        ReflectionTestUtils.setField(geminiService, "http", mockHttpClient);
+        when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
+
+        @SuppressWarnings("unchecked")
+        HttpResponse<String> saturado = org.mockito.Mockito.mock(HttpResponse.class);
+        when(saturado.statusCode()).thenReturn(503);
+        when(saturado.body()).thenReturn("{\"error\":{\"code\":503}}");
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn("""
+                {"candidates":[{"content":{"parts":[{"text":"{\\"score\\": 80.0, \\"dangerLead\\": \\"SCA\\"}"}]}}]}
+                """);
+        org.mockito.ArgumentCaptor<HttpRequest> sent = org.mockito.ArgumentCaptor.forClass(HttpRequest.class);
+        org.mockito.Mockito.doReturn(saturado, mockHttpResponse).when(mockHttpClient).send(sent.capture(), any());
+
+        AiAssistDTO result = geminiService.assist(
+                "sca", "Dolor de pecho", "", 60, "M",
+                110, 92, 100, 70, BigDecimal.valueOf(37.0), 22,
+                70.0, 4, null
+        );
+
+        assertThat(result.isActive()).isTrue();
+        assertThat(result.getSuggestedScore()).isEqualTo(80.0);
+        assertThat(sent.getAllValues()).hasSize(2);
+        assertThat(sent.getAllValues().get(0).uri().toString()).contains("modelo-saturado");
+        assertThat(sent.getAllValues().get(1).uri().toString()).contains("modelo-libre");
+    }
 }

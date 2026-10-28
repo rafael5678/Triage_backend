@@ -29,7 +29,7 @@ public class GeminiTriageService {
     @Value("${app.gemini.api-key:}")
     private String apiKey;
 
-    @Value("${app.gemini.model:gemini-3.8-flash}")
+    @Value("${app.gemini.model:gemini-3.8-flash,gemini-3.5-flash,gemini-3.5-flash-lite}")
     private String model;
 
     public GeminiTriageService(ObjectMapper json, SymptomRepository symptoms) {
@@ -99,17 +99,25 @@ public class GeminiTriageService {
             payload.set("generationConfig", gen);
             String body = json.writeValueAsString(payload);
 
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                    + (model == null || model.isBlank() ? "gemini-3.8-flash" : model.trim()) + ":generateContent";
-            HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(25))
-                    .header("Content-Type", "application/json")
-                    .header("x-goog-api-key", apiKey.trim())
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() >= 400) {
-                log.warn("Gemini HTTP {}: {}", res.statusCode(), res.body());
+            HttpResponse<String> res = null;
+            for (String candidate : models()) {
+                String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidate + ":generateContent";
+                HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("Content-Type", "application/json")
+                        .header("x-goog-api-key", apiKey.trim())
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build();
+                res = http.send(req, HttpResponse.BodyHandlers.ofString());
+                if (res.statusCode() < 400) {
+                    break;
+                }
+                log.warn("Gemini {} HTTP {}: {}", candidate, res.statusCode(), res.body());
+                if (res.statusCode() == 400 || res.statusCode() == 401 || res.statusCode() == 403) {
+                    break;
+                }
+            }
+            if (res == null || res.statusCode() >= 400) {
                 return AiAssistDTO.builder().active(false).build();
             }
             JsonNode root = json.readTree(res.body());
@@ -148,6 +156,22 @@ public class GeminiTriageService {
             log.warn("Gemini no disponible, se usa solo el protocolo: {}", ex.getMessage());
             return AiAssistDTO.builder().active(false).build();
         }
+    }
+
+    /** GEMINI_MODEL admite varios modelos separados por coma; si uno está saturado se prueba el siguiente. */
+    private List<String> models() {
+        List<String> out = new ArrayList<>();
+        if (model != null) {
+            for (String name : model.split(",")) {
+                if (!name.isBlank()) {
+                    out.add(name.trim());
+                }
+            }
+        }
+        if (out.isEmpty()) {
+            out.add("gemini-3.8-flash");
+        }
+        return out;
     }
 
     private static List<String> texts(JsonNode node) {

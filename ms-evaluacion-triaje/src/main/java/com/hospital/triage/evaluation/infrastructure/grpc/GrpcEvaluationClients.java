@@ -101,7 +101,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
             request.setLocalModelScore(localModelScore);
         }
         try {
-            AssistReply reply = ia.withDeadlineAfter(30, TimeUnit.SECONDS).assist(request.build());
+            AssistReply reply = ia.withDeadlineAfter(50, TimeUnit.SECONDS).assist(request.build());
             return toAssist(reply);
         } catch (StatusRuntimeException ex) {
             log.warn("ms-ia-recomendacion no respondió, se usa solo el protocolo: {}", ex.getStatus().getCode());
