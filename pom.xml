@@ -101,6 +101,8 @@
                         <source>17</source>
                         <target>17</target>
                         <release>17</release>
+                        <!-- Spring 6 lee los nombres de @PathVariable y @RequestParam de aquí. -->
+                        <parameters>true</parameters>
                     </configuration>
                 </plugin>
                 <plugin>
