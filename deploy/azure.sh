@@ -6,7 +6,7 @@ set -euo pipefail
 
 LOCATION="${LOCATION:-westus2}"
 RG="${RG:-triage-rg}"
-ENV_NAME="${ENV_NAME:-triage-env}"
+ENV_NAME="${ENV_NAME:-triage-env-std}"
 IMAGE="${IMAGE:-ghcr.io/rafael5678/triage-backend:latest}"
 FRONTEND_DEFAULT="https://clasificador-predictivo-e.vercel.app"
 
@@ -32,8 +32,10 @@ echo "== Preparando Azure en ${LOCATION}"
 az extension add --name containerapp --upgrade --only-show-errors --yes
 az provider register --namespace Microsoft.App --wait
 az group create -n "$RG" -l "$LOCATION" -o none
+# Un entorno express no acepta ingress HTTP/2, y gRPC lo necesita.
 if ! az containerapp env show -n "$ENV_NAME" -g "$RG" >/dev/null 2>&1; then
-  az containerapp env create -n "$ENV_NAME" -g "$RG" -l "$LOCATION" --logs-destination none -o none
+  az containerapp env create -n "$ENV_NAME" -g "$RG" -l "$LOCATION" \
+    --enable-workload-profiles true --logs-destination none -o none
 fi
 
 SECRETS=()
@@ -53,6 +55,7 @@ upsert() {
       extra=(--secrets "${SECRETS[@]}")
     fi
     az containerapp create -n "$name" -g "$RG" --environment "$ENV_NAME" --image "$IMAGE" \
+      --workload-profile-name Consumption \
       --target-port 8080 --ingress external --transport "$transport" \
       --cpu 0.5 --memory 1.0Gi --min-replicas 0 --max-replicas 1 \
       "${extra[@]}" --env-vars "$@" -o none

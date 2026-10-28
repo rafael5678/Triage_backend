@@ -24,6 +24,8 @@ El script pide la URL del frontend, la `DATABASE_URL` de Supabase, la clave de G
 
 Si la región `westus2` no está permitida en la suscripción, se elige otra: `LOCATION=eastus bash deploy/azure.sh`.
 
+El entorno se crea con workload profiles (plan Consumption), no en modo express: express no acepta ingress HTTP/2 y gRPC lo necesita.
+
 Para desplegar un cambio: push a `develop`, esperar a que termine la acción de GitHub y volver a correr el script.
 
 ## Variables por app
