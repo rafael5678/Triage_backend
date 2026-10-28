@@ -96,7 +96,7 @@ SECRETS=("dburl=${DATABASE_URL}" "gemini=${GEMINI_API_KEY}")
 upsert ms-ia-recomendacion http2 \
   MODULE=ms-ia-recomendacion PORT=8080 \
   DATABASE_URL=secretref:dburl CORS_ORIGINS="$CORS_ORIGINS" \
-  GEMINI_API_KEY=secretref:gemini GEMINI_MODEL=gemini-3.8-flash,gemini-3.5-flash,gemini-3.5-flash-lite
+  GEMINI_API_KEY=secretref:gemini GEMINI_MODEL=gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-3-flash-preview
 IA="$(fqdn ms-ia-recomendacion)"
 
 echo "== 3/4 ms-evaluacion-triaje"

@@ -29,7 +29,7 @@ public class GeminiTriageService {
     @Value("${app.gemini.api-key:}")
     private String apiKey;
 
-    @Value("${app.gemini.model:gemini-3.8-flash,gemini-3.5-flash,gemini-3.5-flash-lite}")
+    @Value("${app.gemini.model:gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-3-flash-preview}")
     private String model;
 
     public GeminiTriageService(ObjectMapper json, SymptomRepository symptoms) {
@@ -169,7 +169,7 @@ public class GeminiTriageService {
             }
         }
         if (out.isEmpty()) {
-            out.add("gemini-3.8-flash");
+            out.add("gemini-3.5-flash-lite");
         }
         return out;
     }
