@@ -19,5 +19,5 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /jars /app
 ENV MODULE=ms-pacientes-auth
-EXPOSE 8081
-ENTRYPOINT ["sh", "-c", "java -Djava.net.preferIPv4Stack=true -jar /app/${MODULE}-0.1.0.jar"]
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "java -XX:MaxRAMPercentage=75 -XX:TieredStopAtLevel=1 -Djava.net.preferIPv4Stack=true -jar /app/${MODULE}-0.1.0.jar"]

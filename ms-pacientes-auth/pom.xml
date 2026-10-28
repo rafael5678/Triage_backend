@@ -23,12 +23,26 @@
       <artifactId>triage-grpc-contracts</artifactId>
     </dependency>
     <dependency>
-      <groupId>net.devh</groupId>
-      <artifactId>grpc-server-spring-boot-starter</artifactId>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-servlet-jakarta</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jetty</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.http2</groupId>
+      <artifactId>jetty-http2-server</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -55,6 +69,11 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty-shaded</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

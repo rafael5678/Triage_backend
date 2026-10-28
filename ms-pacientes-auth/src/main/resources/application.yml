@@ -16,10 +16,8 @@ spring:
 
 server:
   port: ${PORT:8081}
-
-grpc:
-  server:
-    port: ${GRPC_PORT:9081}
+  http2:
+    enabled: true
 
 app:
   cors:

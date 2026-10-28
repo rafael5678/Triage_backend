@@ -30,7 +30,7 @@ public class GrpcEvaluationAdapter implements EvaluationPort {
     @Override
     public List<RankedPatientDTO> listByStatus(CareStatus status) {
         try {
-            RankedPatientList reply = evaluations.withDeadlineAfter(5, TimeUnit.SECONDS)
+            RankedPatientList reply = evaluations.withDeadlineAfter(45, TimeUnit.SECONDS)
                     .listByStatus(StatusQuery.newBuilder().setStatus(status.name()).build());
             return reply.getPatientsList().stream().map(RankedPatientMessages::toDto).toList();
         } catch (StatusRuntimeException ex) {
@@ -41,7 +41,7 @@ public class GrpcEvaluationAdapter implements EvaluationPort {
     @Override
     public List<RankedPatientDTO> listAll() {
         try {
-            RankedPatientList reply = evaluations.withDeadlineAfter(5, TimeUnit.SECONDS)
+            RankedPatientList reply = evaluations.withDeadlineAfter(45, TimeUnit.SECONDS)
                     .listAll(Empty.getDefaultInstance());
             return reply.getPatientsList().stream().map(RankedPatientMessages::toDto).toList();
         } catch (StatusRuntimeException ex) {
@@ -52,7 +52,7 @@ public class GrpcEvaluationAdapter implements EvaluationPort {
     @Override
     public RankedPatientDTO updateStatus(UUID patientId, CareStatus status) {
         try {
-            var reply = evaluations.withDeadlineAfter(5, TimeUnit.SECONDS).updateCareStatus(
+            var reply = evaluations.withDeadlineAfter(45, TimeUnit.SECONDS).updateCareStatus(
                     CareStatusUpdate.newBuilder()
                             .setPatientId(patientId.toString())
                             .setStatus(status.name())
@@ -79,7 +79,7 @@ public class GrpcEvaluationAdapter implements EvaluationPort {
                     .build());
         }
         try {
-            evaluations.withDeadlineAfter(5, TimeUnit.SECONDS).applyPositions(batch.build());
+            evaluations.withDeadlineAfter(45, TimeUnit.SECONDS).applyPositions(batch.build());
         } catch (StatusRuntimeException ex) {
             throw unavailable(ex);
         }

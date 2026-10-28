@@ -11,11 +11,11 @@ import com.hospital.triage.grpc.v1.SymptomQuery;
 import com.hospital.triage.grpc.v1.SymptomSeverityReply;
 import com.google.protobuf.Empty;
 import io.grpc.stub.StreamObserver;
-import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
-@GrpcService
+@Component
 public class ClinicalAiGrpcService extends ClinicalAiGrpc.ClinicalAiImplBase {
 
     private final GeminiTriageService gemini;

@@ -20,17 +20,17 @@ spring:
 
 server:
   port: ${PORT:8082}
+  http2:
+    enabled: true
 
 grpc:
-  server:
-    port: ${GRPC_PORT:9082}
   client:
     GLOBAL:
-      negotiation-type: plaintext
+      negotiation-type: ${GRPC_NEGOTIATION:plaintext}
     pacientes:
-      address: ${GRPC_CLIENT_PACIENTES:static://localhost:9081}
+      address: ${GRPC_CLIENT_PACIENTES:static://localhost:8081}
     ia:
-      address: ${GRPC_CLIENT_IA:static://localhost:9084}
+      address: ${GRPC_CLIENT_IA:static://localhost:8084}
 
 app:
   cors:

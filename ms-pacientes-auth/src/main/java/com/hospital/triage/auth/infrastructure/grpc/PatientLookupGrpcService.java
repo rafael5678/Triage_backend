@@ -10,11 +10,11 @@ import com.hospital.triage.grpc.v1.PatientLookupGrpc;
 import com.hospital.triage.grpc.v1.PatientView;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-@GrpcService
+@Component
 public class PatientLookupGrpcService extends PatientLookupGrpc.PatientLookupImplBase {
 
     private final PatientService patients;

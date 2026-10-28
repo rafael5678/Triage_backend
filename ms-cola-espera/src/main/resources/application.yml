@@ -4,9 +4,9 @@ server:
 grpc:
   client:
     GLOBAL:
-      negotiation-type: plaintext
+      negotiation-type: ${GRPC_NEGOTIATION:plaintext}
     evaluacion:
-      address: ${GRPC_CLIENT_EVALUACION:static://localhost:9082}
+      address: ${GRPC_CLIENT_EVALUACION:static://localhost:8082}
 
 app:
   cors:

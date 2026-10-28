@@ -45,7 +45,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
     @Override
     public PatientSnapshot require(UUID id) {
         try {
-            PatientView view = patients.withDeadlineAfter(3, TimeUnit.SECONDS)
+            PatientView view = patients.withDeadlineAfter(25, TimeUnit.SECONDS)
                     .getPatient(PatientId.newBuilder().setId(id.toString()).build());
             return toSnapshot(view);
         } catch (StatusRuntimeException ex) {
@@ -64,7 +64,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
         try {
             PatientIds.Builder request = PatientIds.newBuilder();
             ids.forEach(id -> request.addIds(id.toString()));
-            PatientList list = patients.withDeadlineAfter(3, TimeUnit.SECONDS).getPatients(request.build());
+            PatientList list = patients.withDeadlineAfter(25, TimeUnit.SECONDS).getPatients(request.build());
             Map<UUID, PatientSnapshot> found = new HashMap<>();
             for (PatientView view : list.getPatientsList()) {
                 PatientSnapshot snapshot = toSnapshot(view);
@@ -101,7 +101,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
             request.setLocalModelScore(localModelScore);
         }
         try {
-            AssistReply reply = ia.withDeadlineAfter(15, TimeUnit.SECONDS).assist(request.build());
+            AssistReply reply = ia.withDeadlineAfter(30, TimeUnit.SECONDS).assist(request.build());
             return toAssist(reply);
         } catch (StatusRuntimeException ex) {
             log.warn("ms-ia-recomendacion no respondió, se usa solo el protocolo: {}", ex.getStatus().getCode());
@@ -112,7 +112,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
     @Override
     public boolean configured() {
         try {
-            return ia.withDeadlineAfter(2, TimeUnit.SECONDS)
+            return ia.withDeadlineAfter(5, TimeUnit.SECONDS)
                     .health(Empty.getDefaultInstance())
                     .getConfigured();
         } catch (StatusRuntimeException ex) {
@@ -126,7 +126,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
             return Optional.empty();
         }
         try {
-            SymptomSeverityReply reply = ia.withDeadlineAfter(2, TimeUnit.SECONDS)
+            SymptomSeverityReply reply = ia.withDeadlineAfter(25, TimeUnit.SECONDS)
                     .symptomSeverity(SymptomQuery.newBuilder().setConditionId(conditionId).build());
             return reply.getFound() ? Optional.of(reply.getSeverity()) : Optional.empty();
         } catch (StatusRuntimeException ex) {
