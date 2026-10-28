@@ -27,6 +27,8 @@ public record ClinicalCase(
         String photoMime,
         double protocolScore,
         int news2,
-        Double localModelScore
+        Double localModelScore,
+        boolean pregnant,
+        Integer gestationWeeks
 ) {
 }

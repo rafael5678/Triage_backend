@@ -27,6 +27,9 @@ final class RankedPatientAssembler {
                 .conditionId(patient.conditionId())
                 .reason(patient.reason())
                 .history(patient.history())
+                .phone(patient.phone())
+                .pregnant(patient.pregnant())
+                .gestationWeeks(patient.gestationWeeks())
                 .queuePosition(position);
 
         if (evaluation != null) {
@@ -55,7 +58,13 @@ final class RankedPatientAssembler {
                     .destinationCode(evaluation.getDestinationCode())
                     .destinationReason(evaluation.getDestinationReason())
                     .maxWaitMinutes(evaluation.getMaxWaitMinutes())
-                    .estimatedFields(splitFields(evaluation.getEstimatedFields()));
+                    .estimatedFields(splitFields(evaluation.getEstimatedFields()))
+                    .evaluatedBy(evaluation.getEvaluatedBy())
+                    .arrivedAt(evaluation.getArrivedAt() != null ? evaluation.getArrivedAt() : evaluation.getEvaluatedAt())
+                    .careStartedAt(evaluation.getCareStartedAt())
+                    .present(evaluation.isPresent())
+                    .notifiedAt(evaluation.getNotifiedAt())
+                    .notifiedChannel(evaluation.getNotifiedChannel());
         }
 
         if (signs != null) {

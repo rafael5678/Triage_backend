@@ -47,4 +47,17 @@ public class PatientIntakeDTO {
     @Size(max = 400)
     @JsonAlias("antecedentes")
     private String history;
+
+    /** Celular para avisarle por WhatsApp cuando se acerque su turno. */
+    @Size(max = 20)
+    @jakarta.validation.constraints.Pattern(regexp = "^[0-9+ ()-]*$")
+    @JsonAlias("telefono")
+    private String phone;
+
+    @JsonAlias("embarazo")
+    private Boolean pregnant;
+
+    @Min(1) @Max(45)
+    @JsonAlias("semanasGestacion")
+    private Integer gestationWeeks;
 }

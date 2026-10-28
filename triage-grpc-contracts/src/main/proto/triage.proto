@@ -28,6 +28,18 @@ service EvaluationAccess {
   rpc ListAll (google.protobuf.Empty) returns (RankedPatientList);
   rpc UpdateCareStatus (CareStatusUpdate) returns (RankedPatient);
   rpc ApplyPositions (PositionBatch) returns (google.protobuf.Empty);
+  rpc MarkNotified (NotifyMark) returns (RankedPatient);
+  rpc SetPresence (PresenceUpdate) returns (RankedPatient);
+}
+
+message NotifyMark {
+  string patient_id = 1;
+  string channel = 2;
+}
+
+message PresenceUpdate {
+  string patient_id = 1;
+  bool present = 2;
 }
 
 message PatientId {
@@ -47,6 +59,9 @@ message PatientView {
   string condition_id = 6;
   string reason = 7;
   string history = 8;
+  string phone = 9;
+  bool pregnant = 10;
+  optional int32 gestation_weeks = 11;
 }
 
 message PatientList {
@@ -74,6 +89,8 @@ message AssistRequest {
   optional int32 pain_scale = 18;
   string consciousness = 19;
   repeated string estimated_fields = 20;
+  bool pregnant = 21;
+  optional int32 gestation_weeks = 22;
 }
 
 message AssistReply {
@@ -175,4 +192,13 @@ message RankedPatient {
   string destination_reason = 42;
   optional int32 max_wait_minutes = 43;
   repeated string estimated_fields = 44;
+  string phone = 45;
+  bool pregnant = 46;
+  optional int32 gestation_weeks = 47;
+  string evaluated_by = 48;
+  string care_started_at = 49;
+  bool absent = 50;
+  string notified_at = 51;
+  string notified_channel = 52;
+  string arrived_at = 53;
 }

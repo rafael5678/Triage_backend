@@ -70,8 +70,16 @@ public class InsightService {
         }
 
         List<Long> waits = waiting.stream()
-                .filter(p -> p.getEvaluatedAt() != null)
-                .map(p -> Math.max(0, Duration.between(p.getEvaluatedAt(), now).toMinutes()))
+                .filter(p -> p.getArrivedAt() != null || p.getEvaluatedAt() != null)
+                .map(p -> (long) WaitClock.waited(p, now))
+                .toList();
+        int overdue = (int) waiting.stream().filter(p -> WaitClock.maxWait(p) - WaitClock.waited(p, now) < 0).count();
+        List<Long> toCare = all.stream()
+                .filter(p -> p.getCareStartedAt() != null)
+                .map(p -> {
+                    OffsetDateTime start = p.getArrivedAt() != null ? p.getArrivedAt() : p.getEvaluatedAt();
+                    return start == null ? 0L : Math.max(0, Duration.between(start, p.getCareStartedAt()).toMinutes());
+                })
                 .toList();
 
         return TriageStatsDTO.builder()
@@ -84,6 +92,8 @@ public class InsightService {
                 .averageWaitingMinutes(waits.isEmpty() ? null : round(waits.stream().mapToLong(Long::longValue).average().orElse(0)))
                 .longestWaitingMinutes(waits.isEmpty() ? null : (int) waits.stream().mapToLong(Long::longValue).max().orElse(0))
                 .aiActivePercent(all.isEmpty() ? null : round(100.0 * withAi / all.size()))
+                .overdue(overdue)
+                .averageTimeToCareMinutes(toCare.isEmpty() ? null : round(toCare.stream().mapToLong(Long::longValue).average().orElse(0)))
                 .byLevel(byLevel)
                 .byArea(sortByCount(byArea))
                 .byStatus(byStatus)
@@ -101,25 +111,25 @@ public class InsightService {
 
     List<BoardEntryDTO> board(List<RankedPatientDTO> waitingRaw, List<RankedPatientDTO> inCare, OffsetDateTime now) {
         List<RankedPatientDTO> waiting = new ArrayList<>(waitingRaw);
-        waiting.sort(Comparator
-                .comparing(RankedPatientDTO::getRiskScore, Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(RankedPatientDTO::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
+        waiting.sort(QueueService.PRIORITY);
         List<BoardEntryDTO> out = new ArrayList<>();
         for (int i = 0; i < waiting.size(); i++) {
             RankedPatientDTO p = waiting.get(i);
-            int waited = waited(p, now);
-            int target = p.getMaxWaitMinutes() == null ? 30 : p.getMaxWaitMinutes();
+            int waited = WaitClock.waited(p, now);
+            int target = WaitClock.maxWait(p);
             int estimated = Math.max(0, target + i * MINUTES_PER_PATIENT_AHEAD - waited);
-            out.add(entry(p, i + 1, waited, estimated));
+            out.add(entry(p, i + 1, waited, estimated, target - waited < 0));
         }
         inCare.stream()
                 .sorted(Comparator.comparing(RankedPatientDTO::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
-                .forEach(p -> out.add(entry(p, null, waited(p, now), 0)));
+                .forEach(p -> out.add(entry(p, null, WaitClock.waited(p, now), 0, false)));
         return out;
     }
 
-    private BoardEntryDTO entry(RankedPatientDTO p, Integer position, int waited, int estimated) {
+    private BoardEntryDTO entry(RankedPatientDTO p, Integer position, int waited, int estimated, boolean overdue) {
         return BoardEntryDTO.builder()
+                .overdue(overdue)
+                .present(!Boolean.FALSE.equals(p.getPresent()))
                 .ticket(ticket(p.getName(), p.getDocument()))
                 .position(position)
                 .triageLevel(p.getTriageLevel())
@@ -150,13 +160,6 @@ public class InsightService {
         return tail.isEmpty() ? initials.toString() : initials + "-" + tail;
     }
 
-    private static int waited(RankedPatientDTO p, OffsetDateTime now) {
-        if (p.getEvaluatedAt() == null) {
-            return 0;
-        }
-        return (int) Math.max(0, Duration.between(p.getEvaluatedAt(), now).toMinutes());
-    }
-
     private static Map<String, Integer> arrivalsByHour(List<RankedPatientDTO> all, OffsetDateTime now) {
         ZonedDateTime end = now.atZoneSameInstant(ZONE).truncatedTo(ChronoUnit.HOURS);
         Map<String, Integer> hours = new LinkedHashMap<>();
@@ -164,10 +167,11 @@ public class InsightService {
             hours.put(label(end.minusHours(i)), 0);
         }
         for (RankedPatientDTO p : all) {
-            if (p.getEvaluatedAt() == null) {
+            OffsetDateTime arrived = p.getArrivedAt() != null ? p.getArrivedAt() : p.getEvaluatedAt();
+            if (arrived == null || Duration.between(arrived, now).toHours() >= 24) {
                 continue;
             }
-            ZonedDateTime at = p.getEvaluatedAt().atZoneSameInstant(ZONE).truncatedTo(ChronoUnit.HOURS);
+            ZonedDateTime at = arrived.atZoneSameInstant(ZONE).truncatedTo(ChronoUnit.HOURS);
             hours.computeIfPresent(label(at), (k, v) -> v + 1);
         }
         return hours;

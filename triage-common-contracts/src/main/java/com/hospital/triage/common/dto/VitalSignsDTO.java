@@ -70,4 +70,11 @@ public class VitalSignsDTO implements ExtraFindings {
 
     @Builder.Default
     private List<String> estimatedFields = new ArrayList<>();
+
+    /** Quién tomó los signos (nombre de la sesión del personal). */
+    @Size(max = 120)
+    private String evaluatedBy;
+
+    /** false si la persona se registró pero todavía no está en la sala. */
+    private Boolean present;
 }

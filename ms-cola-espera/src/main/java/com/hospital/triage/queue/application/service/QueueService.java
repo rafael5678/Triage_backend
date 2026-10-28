@@ -17,6 +17,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QueueService {
 
+    /** Primero el puntaje más alto; si empatan, quien llegó antes. */
+    static final Comparator<RankedPatientDTO> PRIORITY = Comparator
+            .comparing(RankedPatientDTO::getRiskScore, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(p -> p.getArrivedAt() != null ? p.getArrivedAt() : p.getEvaluatedAt(),
+                    Comparator.nullsLast(Comparator.naturalOrder()));
+
     private final EvaluationPort evaluations;
 
     public QueueStateDTO queue() {
@@ -29,7 +35,14 @@ public class QueueService {
     }
 
     public List<RankedPatientDTO> all() {
-        return evaluations.listAll();
+        OffsetDateTime now = OffsetDateTime.now();
+        List<RankedPatientDTO> rows = evaluations.listAll();
+        rows.forEach(p -> {
+            if (p.getStatus() == CareStatus.EN_ESPERA) {
+                WaitClock.stamp(p, now);
+            }
+        });
+        return rows;
     }
 
     public RankedPatientDTO startCare(UUID patientId) {
@@ -42,16 +55,30 @@ public class QueueService {
         return updated;
     }
 
+    public RankedPatientDTO setPresence(UUID patientId, boolean present) {
+        return evaluations.setPresence(patientId, present);
+    }
+
+    public RankedPatientDTO markNotified(UUID patientId, String channel) {
+        return evaluations.markNotified(patientId, channel);
+    }
+
     public List<RankedPatientDTO> ranked(CareStatus status) {
-        List<RankedPatientDTO> latest = new ArrayList<>(evaluations.listByStatus(status));
-        latest.sort(Comparator
-                .comparing(RankedPatientDTO::getRiskScore, Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(RankedPatientDTO::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
+        List<RankedPatientDTO> latest = sorted(evaluations.listByStatus(status));
+        evaluations.applyPositions(latest);
+        return latest;
+    }
+
+    /** Ordena, numera y calcula tiempos sin escribir nada (para lecturas frecuentes). */
+    static List<RankedPatientDTO> sorted(List<RankedPatientDTO> rows) {
+        OffsetDateTime now = OffsetDateTime.now();
+        List<RankedPatientDTO> latest = new ArrayList<>(rows);
+        latest.sort(PRIORITY);
         int position = 1;
         for (RankedPatientDTO patient : latest) {
             patient.setQueuePosition(position++);
+            WaitClock.stamp(patient, now);
         }
-        evaluations.applyPositions(latest);
         return latest;
     }
 }

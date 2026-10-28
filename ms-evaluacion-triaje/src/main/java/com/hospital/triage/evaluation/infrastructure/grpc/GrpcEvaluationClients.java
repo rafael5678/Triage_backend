@@ -121,6 +121,10 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
         if (input.estimatedFields() != null) {
             request.addAllEstimatedFields(input.estimatedFields());
         }
+        request.setPregnant(input.pregnant());
+        if (input.gestationWeeks() != null) {
+            request.setGestationWeeks(input.gestationWeeks());
+        }
         byte[] image = decodePhoto(input.photoBase64());
         if (image.length > 0) {
             request.setImage(ByteString.copyFrom(image))
@@ -183,7 +187,10 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
                 emptyToNull(view.getSex()),
                 emptyToNull(view.getConditionId()),
                 view.getReason(),
-                view.getHistory()
+                view.getHistory(),
+                emptyToNull(view.getPhone()),
+                view.getPregnant(),
+                view.hasGestationWeeks() ? view.getGestationWeeks() : null
         );
     }
 

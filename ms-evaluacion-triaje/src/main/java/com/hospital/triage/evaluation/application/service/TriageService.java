@@ -55,23 +55,58 @@ public class TriageService {
     public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
                                 int respiratoryRate, String conditionId, String history,
                                 Integer glucose, Integer painScale, String consciousness) {
+        return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                conditionId, history, glucose, painScale, consciousness, false, null);
+    }
+
+    /**
+     * Menores de 16 años: NEWS2 solo está validado en adultos, así que los signos se puntúan contra los
+     * rangos normales de su edad (al estilo PEWS) y los pisos de emergencia también son pediátricos.
+     * Embarazo: la presión alta y los motivos obstétricos de riesgo suben el piso.
+     */
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history,
+                                Integer glucose, Integer painScale, String consciousness,
+                                boolean pregnant, Integer gestationWeeks) {
         validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
         String avpu = avpu(consciousness);
-        int news = news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate) + consciousnessPoints(avpu);
-        double shock = heartRate / (double) Math.max(40, systolic);
+        PediatricBand band = PediatricBand.forAge(age);
+        int vitalsScore = band == null
+                ? news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate)
+                : band.score(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate);
+        int news = vitalsScore + consciousnessPoints(avpu);
         int condition = conditionSeverity(conditionId);
         int comorb = scoreHistory(history);
 
+        double shockTerm = band == null
+                ? Math.min(25, (heartRate / (double) Math.max(40, systolic) - 0.5) * 40)
+                : Math.min(25, Math.max(0, heartRate / (double) band.hrMax() - 1) * 60);
+        double ageTerm = band == null ? Math.min(12, age / 10.0) * 0.35 : (age < 1 ? 3 : 0);
+
         double score = condition * 0.38 + (Math.min(20, news) / 20.0) * 100 * 0.42
-                + Math.min(25, (shock - 0.5) * 40)
-                + Math.min(12, age / 10.0) * 0.35
+                + shockTerm
+                + ageTerm
                 + comorb * 0.55;
 
         if (painScale != null && painScale >= 8) {
             score += 4;
         }
-        if (spo2 < 85 || systolic < 80 || respiratoryRate < 8 || heartRate > 150) {
+        boolean extremeVitals = band == null
+                ? spo2 < 85 || systolic < 80 || respiratoryRate < 8 || heartRate > 150
+                : spo2 < 85 || band.extreme(heartRate, respiratoryRate, systolic);
+        if (extremeVitals) {
             score = Math.max(score, 86);
+        }
+        if (pregnant) {
+            if (systolic >= 160 || diastolic >= 110) {
+                score = Math.max(score, 78);
+            } else if (systolic >= 140 || diastolic >= 90) {
+                score = Math.max(score, 62);
+            }
+            if ("hemorragia".equals(conditionId) || "abdomen".equals(conditionId) || "trauma".equals(conditionId)
+                    || (gestationWeeks != null && gestationWeeks >= 20 && "convulsion".equals(conditionId))) {
+                score = Math.max(score, 62);
+            }
         }
         if ("P".equals(avpu) || "U".equals(avpu)) {
             score = Math.max(score, 86);

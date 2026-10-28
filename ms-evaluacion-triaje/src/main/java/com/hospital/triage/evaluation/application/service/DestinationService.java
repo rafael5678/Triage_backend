@@ -31,11 +31,23 @@ public class DestinationService {
     );
 
     public Destination decide(TriageLevel level, String conditionId, Integer age, String aiSuggestedArea) {
+        return decide(level, conditionId, age, aiSuggestedArea, false, null, 0, 0);
+    }
+
+    /** Con embarazo, la presión muy alta o el sangrado activan un código obstétrico propio. */
+    public Destination decide(TriageLevel level, String conditionId, Integer age, String aiSuggestedArea,
+                              boolean pregnant, Integer gestationWeeks, int systolic, int diastolic) {
         CareArea area = CareArea.fromLevel(level);
         StringBuilder reason = new StringBuilder("Nivel de triaje: ").append(area.label());
         String code = null;
 
         Code special = conditionId == null ? null : CODES.get(conditionId);
+        if (pregnant) {
+            Code obstetric = obstetricCode(conditionId, gestationWeeks, systolic, diastolic);
+            if (obstetric != null) {
+                special = obstetric;
+            }
+        }
         if (special != null) {
             code = special.name();
             if (special.minimumArea().moreUrgentThan(area)) {
@@ -54,7 +66,28 @@ public class DestinationService {
             code = code == null ? "Pediatría" : code + " · Pediatría";
             reason.append(". Menor de 14 años: atención pediátrica");
         }
+        if (pregnant && (code == null || !code.contains("obst") && !code.contains("eclampsia"))) {
+            code = code == null ? "Obstetricia" : code + " · Obstetricia";
+            reason.append(". Embarazada").append(gestationWeeks == null ? "" : " de " + gestationWeeks + " semanas")
+                    .append(": valoración obstétrica");
+        }
         return new Destination(area, code, reason.toString(), area.maxWaitMinutes());
+    }
+
+    private static Code obstetricCode(String conditionId, Integer gestationWeeks, int systolic, int diastolic) {
+        boolean afterTwenty = gestationWeeks == null || gestationWeeks >= 20;
+        if (afterTwenty && (systolic >= 160 || diastolic >= 110)) {
+            return new Code("Código preeclampsia", CareArea.URGENCIAS_CRITICAS,
+                    "presión muy alta en el embarazo: riesgo de preeclampsia severa y convulsión");
+        }
+        if ("hemorragia".equals(conditionId)) {
+            return new Code("Código rojo obstétrico", CareArea.URGENCIAS_CRITICAS,
+                    "sangrado en el embarazo: riesgo para la madre y el bebé");
+        }
+        if (afterTwenty && "convulsion".equals(conditionId)) {
+            return new Code("Código eclampsia", CareArea.REANIMACION, "convulsión en el embarazo: posible eclampsia");
+        }
+        return null;
     }
 
     private static String capitalize(String text) {

@@ -6,6 +6,8 @@ import com.hospital.triage.common.exception.PatientNotFoundException;
 import com.hospital.triage.grpc.mapping.RankedPatientMessages;
 import com.hospital.triage.grpc.v1.CareStatusUpdate;
 import com.hospital.triage.grpc.v1.EvaluationAccessGrpc;
+import com.hospital.triage.grpc.v1.NotifyMark;
+import com.hospital.triage.grpc.v1.PresenceUpdate;
 import com.hospital.triage.grpc.v1.PositionBatch;
 import com.hospital.triage.grpc.v1.QueuePosition;
 import com.hospital.triage.grpc.v1.RankedPatientList;
@@ -81,6 +83,29 @@ public class GrpcEvaluationAdapter implements EvaluationPort {
         try {
             evaluations.withDeadlineAfter(45, TimeUnit.SECONDS).applyPositions(batch.build());
         } catch (StatusRuntimeException ex) {
+            throw unavailable(ex);
+        }
+    }
+
+    @Override
+    public RankedPatientDTO markNotified(UUID patientId, String channel) {
+        return call(patientId, () -> evaluations.withDeadlineAfter(45, TimeUnit.SECONDS).markNotified(
+                NotifyMark.newBuilder().setPatientId(patientId.toString()).setChannel(channel == null ? "" : channel).build()));
+    }
+
+    @Override
+    public RankedPatientDTO setPresence(UUID patientId, boolean present) {
+        return call(patientId, () -> evaluations.withDeadlineAfter(45, TimeUnit.SECONDS).setPresence(
+                PresenceUpdate.newBuilder().setPatientId(patientId.toString()).setPresent(present).build()));
+    }
+
+    private RankedPatientDTO call(UUID patientId, java.util.function.Supplier<com.hospital.triage.grpc.v1.RankedPatient> rpc) {
+        try {
+            return RankedPatientMessages.toDto(rpc.get());
+        } catch (StatusRuntimeException ex) {
+            if (ex.getStatus().getCode() == Status.Code.NOT_FOUND) {
+                throw new PatientNotFoundException(patientId.toString());
+            }
             throw unavailable(ex);
         }
     }

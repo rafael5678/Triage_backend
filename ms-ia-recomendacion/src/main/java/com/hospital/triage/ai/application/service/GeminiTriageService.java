@@ -99,7 +99,7 @@ public class GeminiTriageService {
                 Motivo: %s (%s)
                 Relato: %s
                 Antecedentes: %s
-                Edad: %d  Sexo: %s
+                Edad: %d  Sexo: %s%s%s
                 FC:%d  SpO2:%d  PAS:%d  PAD:%d  Temp:%s  FR:%d
                 Glucosa (mg/dL): %s  Dolor 0-10: %s  Conciencia AVPU: %s
                 Signos estimados: %s
@@ -112,6 +112,9 @@ public class GeminiTriageService {
                 c.reason() == null ? "" : c.reason(),
                 c.history() == null ? "" : c.history(),
                 c.age(), c.sex() == null ? "" : c.sex(),
+                !c.pregnant() ? "" : "  EMBARAZADA" + (c.gestationWeeks() == null ? "" : " de " + c.gestationWeeks() + " semanas")
+                        + " (considera preeclampsia, hemorragia obstétrica, bienestar fetal)",
+                c.age() < 16 ? "\n                NIÑO/ADOLESCENTE: usa rangos pediátricos para su edad, no los de adulto." : "",
                 c.heartRate(), c.spo2(), c.systolic(), c.diastolic(), c.temperature(), c.respiratoryRate(),
                 c.glucose() == null ? "no medida" : c.glucose(),
                 c.painScale() == null ? "no dicho" : c.painScale(),

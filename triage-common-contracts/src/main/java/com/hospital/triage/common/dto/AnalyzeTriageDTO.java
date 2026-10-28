@@ -100,4 +100,11 @@ public class AnalyzeTriageDTO implements ExtraFindings {
 
     @Builder.Default
     private List<String> estimatedFields = new ArrayList<>();
+
+    @JsonAlias("embarazo")
+    private Boolean pregnant;
+
+    @Min(1) @Max(45)
+    @JsonAlias("semanasGestacion")
+    private Integer gestationWeeks;
 }

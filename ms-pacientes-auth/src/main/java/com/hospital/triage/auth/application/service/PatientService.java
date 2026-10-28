@@ -19,31 +19,41 @@ public class PatientService {
 
     private final PatientRepository patients;
 
+    /** Si el documento ya existe se actualiza la ficha: es la misma persona que vuelve a consultar. */
     @Transactional
     public Patient register(PatientIntakeDTO dto) {
-        // Si el paciente ya existe por documento, retornarlo o actualizarlo
-        Optional<Patient> existing = patients.findByDocument(dto.getDocument().trim());
-        if (existing.isPresent()) {
-            Patient p = existing.get();
-            p.setName(dto.getName().trim());
-            p.setAge(dto.getAge());
-            p.setSex(dto.getSex());
-            p.setConditionId(dto.getConditionId());
-            p.setReason(dto.getReason());
-            p.setHistory(dto.getHistory());
-            return patients.save(p);
-        }
-
-        Patient p = new Patient();
+        Patient p = patients.findByDocument(dto.getDocument().trim()).orElseGet(() -> {
+            Patient created = new Patient();
+            created.setDocument(dto.getDocument().trim());
+            created.setCreatedAt(OffsetDateTime.now());
+            return created;
+        });
         p.setName(dto.getName().trim());
-        p.setDocument(dto.getDocument().trim());
         p.setAge(dto.getAge());
         p.setSex(dto.getSex());
         p.setConditionId(dto.getConditionId());
         p.setReason(dto.getReason());
         p.setHistory(dto.getHistory());
-        p.setCreatedAt(OffsetDateTime.now());
+        p.setPhone(normalizePhone(dto.getPhone()));
+        boolean pregnant = Boolean.TRUE.equals(dto.getPregnant()) && "F".equalsIgnoreCase(dto.getSex());
+        p.setPregnant(pregnant);
+        p.setGestationWeeks(pregnant ? dto.getGestationWeeks() : null);
         return patients.save(p);
+    }
+
+    /** Deja solo dígitos; un celular colombiano de 10 dígitos queda con el indicativo 57. */
+    static String normalizePhone(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String digits = raw.replaceAll("\\D", "");
+        if (digits.isEmpty()) {
+            return null;
+        }
+        if (digits.length() == 10 && digits.startsWith("3")) {
+            return "57" + digits;
+        }
+        return digits;
     }
 
     public Patient findById(UUID id) {

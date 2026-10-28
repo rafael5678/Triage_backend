@@ -14,4 +14,8 @@ public interface EvaluationPort {
     RankedPatientDTO updateStatus(UUID patientId, CareStatus status);
 
     void applyPositions(List<RankedPatientDTO> ranked);
+
+    RankedPatientDTO markNotified(UUID patientId, String channel);
+
+    RankedPatientDTO setPresence(UUID patientId, boolean present);
 }

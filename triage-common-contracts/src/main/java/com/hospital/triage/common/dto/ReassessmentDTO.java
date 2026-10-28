@@ -65,4 +65,7 @@ public class ReassessmentDTO implements ExtraFindings {
 
     @Builder.Default
     private List<String> estimatedFields = new ArrayList<>();
+
+    @Size(max = 120)
+    private String evaluatedBy;
 }

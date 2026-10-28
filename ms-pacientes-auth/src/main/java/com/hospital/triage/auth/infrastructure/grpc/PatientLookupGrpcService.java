@@ -72,7 +72,7 @@ public class PatientLookupGrpcService extends PatientLookupGrpc.PatientLookupImp
     }
 
     private PatientView toView(Patient patient) {
-        return PatientView.newBuilder()
+        PatientView.Builder view = PatientView.newBuilder()
                 .setId(patient.getId().toString())
                 .setName(text(patient.getName()))
                 .setDocument(text(patient.getDocument()))
@@ -81,7 +81,12 @@ public class PatientLookupGrpcService extends PatientLookupGrpc.PatientLookupImp
                 .setConditionId(text(patient.getConditionId()))
                 .setReason(text(patient.getReason()))
                 .setHistory(text(patient.getHistory()))
-                .build();
+                .setPhone(text(patient.getPhone()))
+                .setPregnant(patient.isPregnant());
+        if (patient.getGestationWeeks() != null) {
+            view.setGestationWeeks(patient.getGestationWeeks());
+        }
+        return view.build();
     }
 
     private String text(String value) {

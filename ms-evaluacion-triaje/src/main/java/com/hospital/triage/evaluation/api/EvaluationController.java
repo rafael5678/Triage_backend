@@ -49,4 +49,10 @@ public class EvaluationController {
     public RankedPatientDTO reassess(@PathVariable UUID patientId, @Valid @RequestBody ReassessmentDTO dto) {
         return evaluationService.reassess(patientId, dto);
     }
+
+    /** Todas las mediciones del paciente, de la primera a la última, para la línea de tiempo. */
+    @GetMapping({"/patients/{patientId}/history", "/pacientes/{patientId}/historial"})
+    public java.util.List<RankedPatientDTO> history(@PathVariable UUID patientId) {
+        return evaluationService.history(patientId);
+    }
 }

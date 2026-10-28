@@ -52,6 +52,8 @@ public class ClinicalAiGrpcService extends ClinicalAiGrpc.ClinicalAiImplBase {
                 .protocolScore(request.getProtocolScore())
                 .news2(request.getNews2())
                 .localModelScore(request.hasLocalModelScore() ? request.getLocalModelScore() : null)
+                .pregnant(request.getPregnant())
+                .gestationWeeks(request.hasGestationWeeks() ? request.getGestationWeeks() : null)
                 .build();
         responseObserver.onNext(AssistMessages.toReply(gemini.assist(clinicalCase)));
         responseObserver.onCompleted();

@@ -90,6 +90,17 @@ public final class RankedPatientMessages {
         addAll(dto.getMonitoring(), builder::addAllMonitoring);
         addAll(dto.getRedFlags(), builder::addAllRedFlags);
         addAll(dto.getEstimatedFields(), builder::addAllEstimatedFields);
+        builder.setPhone(text(dto.getPhone()))
+                .setPregnant(Boolean.TRUE.equals(dto.getPregnant()))
+                .setEvaluatedBy(text(dto.getEvaluatedBy()))
+                .setCareStartedAt(dto.getCareStartedAt() == null ? "" : dto.getCareStartedAt().toString())
+                .setAbsent(Boolean.FALSE.equals(dto.getPresent()))
+                .setNotifiedAt(dto.getNotifiedAt() == null ? "" : dto.getNotifiedAt().toString())
+                .setNotifiedChannel(text(dto.getNotifiedChannel()))
+                .setArrivedAt(dto.getArrivedAt() == null ? "" : dto.getArrivedAt().toString());
+        if (dto.getGestationWeeks() != null) {
+            builder.setGestationWeeks(dto.getGestationWeeks());
+        }
         return builder.build();
     }
 
@@ -129,7 +140,19 @@ public final class RankedPatientMessages {
                 .destinationArea(emptyToNull(message.getDestinationArea()))
                 .destinationCode(emptyToNull(message.getDestinationCode()))
                 .destinationReason(emptyToNull(message.getDestinationReason()))
-                .estimatedFields(new ArrayList<>(message.getEstimatedFieldsList()));
+                .estimatedFields(new ArrayList<>(message.getEstimatedFieldsList()))
+                .phone(emptyToNull(message.getPhone()))
+                .pregnant(message.getPregnant())
+                .evaluatedBy(emptyToNull(message.getEvaluatedBy()))
+                .careStartedAt(time(message.getCareStartedAt()))
+                .present(!message.getAbsent())
+                .notifiedAt(time(message.getNotifiedAt()))
+                .notifiedChannel(emptyToNull(message.getNotifiedChannel()))
+                .arrivedAt(time(message.getArrivedAt()));
+
+        if (message.hasGestationWeeks()) {
+            builder.gestationWeeks(message.getGestationWeeks());
+        }
 
         if (message.hasGlucose()) {
             builder.glucose(message.getGlucose());

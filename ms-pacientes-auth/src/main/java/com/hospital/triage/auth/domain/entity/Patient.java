@@ -49,6 +49,15 @@ public class Patient {
     @Column(name = "creado_en", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
+    @Column(name = "telefono", length = 20)
+    private String phone;
+
+    @Column(name = "embarazo", nullable = false)
+    private boolean pregnant;
+
+    @Column(name = "semanas_gestacion")
+    private Integer gestationWeeks;
+
     @JsonProperty("patientId")
     public UUID getPatientId() {
         return id;

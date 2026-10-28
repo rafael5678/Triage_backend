@@ -23,6 +23,9 @@ public class TriageStatsDTO {
     private Double averageWaitingMinutes;
     private Integer longestWaitingMinutes;
     private Double aiActivePercent;
+    /** Minutos reales entre el triaje y el inicio de la atención, de quienes ya fueron atendidos. */
+    private Double averageTimeToCareMinutes;
+    private int overdue;
     @Builder.Default
     private Map<String, Integer> byLevel = new LinkedHashMap<>();
     @Builder.Default

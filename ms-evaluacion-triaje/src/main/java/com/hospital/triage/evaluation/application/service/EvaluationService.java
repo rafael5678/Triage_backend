@@ -19,9 +19,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -40,7 +41,8 @@ public class EvaluationService {
         Scored scored = score(patient.conditionId(), patient.reason(), patient.history(),
                 patient.age() == null ? 0 : patient.age(), patient.sex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
-                dto.getTemperature(), dto.getRespiratoryRate(), dto, null);
+                dto.getTemperature(), dto.getRespiratoryRate(), dto, null,
+                patient.pregnant(), patient.gestationWeeks());
         return store.save(patient, dto, scored.result(), scored.ia(), scored.destination());
     }
 
@@ -59,18 +61,21 @@ public class EvaluationService {
         vitals.setPhotoBase64(dto.getPhotoBase64());
         vitals.setPhotoMime(dto.getPhotoMime());
         vitals.setEstimatedFields(dto.getEstimatedFields());
+        vitals.setEvaluatedBy(dto.getEvaluatedBy());
         return evaluate(vitals);
     }
 
     public RankedPatientDTO analyze(AnalyzeTriageDTO dto) {
         int age = dto.getAge() == null ? 0 : dto.getAge();
+        boolean pregnant = Boolean.TRUE.equals(dto.getPregnant()) && "F".equalsIgnoreCase(dto.getSex());
+        Integer weeks = pregnant ? dto.getGestationWeeks() : null;
         Scored scored = score(dto.getConditionId(), dto.getReason(), dto.getHistory(), age, dto.getSex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
-                dto.getTemperature(), dto.getRespiratoryRate(), dto, dto.getLocalModelScore());
+                dto.getTemperature(), dto.getRespiratoryRate(), dto, dto.getLocalModelScore(), pregnant, weeks);
 
         PatientSnapshot preview = new PatientSnapshot(
                 null, dto.getName(), dto.getDocument(), dto.getAge(), dto.getSex(),
-                dto.getConditionId(), dto.getReason(), dto.getHistory());
+                dto.getConditionId(), dto.getReason(), dto.getHistory(), null, pregnant, weeks);
         VitalSigns signs = new VitalSigns();
         signs.setHeartRate(dto.getHeartRate());
         signs.setSpo2(dto.getSpo2());
@@ -119,14 +124,27 @@ public class EvaluationService {
         store.applyPositions(positions);
     }
 
+    public List<RankedPatientDTO> history(UUID patientId) {
+        return enrich(store.history(patientId));
+    }
+
+    public RankedPatientDTO markNotified(UUID patientId, String channel) {
+        return enrich(List.of(store.markNotified(patientId, channel))).get(0);
+    }
+
+    public RankedPatientDTO setPresence(UUID patientId, boolean present) {
+        return enrich(List.of(store.setPresence(patientId, present))).get(0);
+    }
+
     private record Scored(TriageService.RiskResult result, AiAssistDTO ia, DestinationService.Destination destination) {
     }
 
     private Scored score(String conditionId, String reason, String history, int age, String sex,
                          int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature, int respiratoryRate,
-                         ExtraFindings extra, Double localModelScore) {
+                         ExtraFindings extra, Double localModelScore, boolean pregnant, Integer gestationWeeks) {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
-                conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness());
+                conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
+                pregnant, gestationWeeks);
         AiAssistDTO ia = clinicalAi.assist(AssistInput.builder()
                 .conditionId(conditionId)
                 .reason(reason)
@@ -148,17 +166,20 @@ public class EvaluationService {
                 .protocolScore(protocol.score().doubleValue())
                 .news2(protocol.news2())
                 .localModelScore(localModelScore)
+                .pregnant(pregnant)
+                .gestationWeeks(gestationWeeks)
                 .build());
         if (ia.getProtocolScore() == null) {
             ia.setProtocolScore(protocol.score().doubleValue());
         }
         var result = triageService.merge(protocol, ia);
-        var destination = destinations.decide(result.level(), conditionId, age, ia.getSuggestedArea());
+        var destination = destinations.decide(result.level(), conditionId, age, ia.getSuggestedArea(),
+                pregnant, gestationWeeks, systolic, diastolic);
         return new Scored(result, ia, destination);
     }
 
     private List<RankedPatientDTO> enrich(List<RankedPatientDTO> rows) {
-        List<UUID> ids = new ArrayList<>();
+        Set<UUID> ids = new LinkedHashSet<>();
         for (RankedPatientDTO row : rows) {
             if (row.getPatientId() != null) {
                 ids.add(row.getPatientId());
@@ -174,6 +195,9 @@ public class EvaluationService {
             row.setConditionId(person.conditionId());
             row.setReason(person.reason());
             row.setHistory(person.history());
+            row.setPhone(person.phone());
+            row.setPregnant(person.pregnant());
+            row.setGestationWeeks(person.gestationWeeks());
         }
         return rows;
     }

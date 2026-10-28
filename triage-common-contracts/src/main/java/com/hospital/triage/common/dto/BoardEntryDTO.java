@@ -22,4 +22,6 @@ public class BoardEntryDTO {
     private Integer maxWaitMinutes;
     private Integer waitedMinutes;
     private Integer estimatedWaitMinutes;
+    private Boolean overdue;
+    private Boolean present;
 }

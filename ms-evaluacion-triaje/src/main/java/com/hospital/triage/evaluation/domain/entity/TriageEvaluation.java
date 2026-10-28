@@ -80,4 +80,28 @@ public class TriageEvaluation {
     /** Signos que estimó la IA en lugar de medirse, separados por coma. */
     @Column(name = "campos_estimados", length = 200)
     private String estimatedFields;
+
+    /** Solo la última evaluación de cada paciente es vigente; las anteriores quedan como historial. */
+    @Column(name = "vigente", nullable = false)
+    private boolean current = true;
+
+    @Column(name = "evaluado_por", length = 120)
+    private String evaluatedBy;
+
+    /** Hora en que empezó esta visita; se conserva entre reevaluaciones para medir la espera real. */
+    @Column(name = "llegada_en")
+    private OffsetDateTime arrivedAt;
+
+    @Column(name = "atencion_inicio")
+    private OffsetDateTime careStartedAt;
+
+    /** false: se registró pero todavía no está en la sala. */
+    @Column(name = "presente", nullable = false)
+    private boolean present = true;
+
+    @Column(name = "notificado_en")
+    private OffsetDateTime notifiedAt;
+
+    @Column(name = "canal_aviso", length = 20)
+    private String notifiedChannel;
 }

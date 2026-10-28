@@ -65,16 +65,32 @@ public class GeminiClient {
         }
     };
     private final ArrayDeque<Instant> lastMinute = new ArrayDeque<>();
+    private final GeminiUsageStore usage;
     private LocalDate day;
     private int usedToday;
 
+    /** Sin almacén: el conteo diario vive en memoria (pruebas). */
     public GeminiClient(ObjectMapper json) {
+        this(json, null);
+    }
+
+    /** Con almacén: el conteo diario está en la base y sobrevive a que Azure duerma el servicio. */
+    @org.springframework.beans.factory.annotation.Autowired
+    public GeminiClient(ObjectMapper json, GeminiUsageStore usage) {
         this.json = json;
+        this.usage = usage;
     }
 
     /** Llamadas reales a Gemini hechas hoy (las que salieron de memoria no cuentan). */
     public synchronized int usedToday() {
         rollDay();
+        if (usage != null) {
+            try {
+                return usage.get(day);
+            } catch (Exception ex) {
+                log.warn("No se pudo leer el uso de Gemini en la base: {}", ex.getMessage());
+            }
+        }
         return usedToday;
     }
 
@@ -206,7 +222,21 @@ public class GeminiClient {
         if (usedToday >= dailyLimit || lastMinute.size() >= perMinuteLimit) {
             return false;
         }
-        usedToday++;
+        if (usage != null) {
+            try {
+                int total = usage.incrementAndGet(day);
+                usedToday = total;
+                if (total > dailyLimit) {
+                    return false;
+                }
+            } catch (Exception ex) {
+                // Si la base no responde se sigue con el conteo en memoria.
+                log.warn("No se pudo registrar el uso de Gemini en la base: {}", ex.getMessage());
+                usedToday++;
+            }
+        } else {
+            usedToday++;
+        }
         lastMinute.addLast(now);
         return true;
     }

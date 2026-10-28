@@ -99,4 +99,23 @@ public class RankedPatientDTO {
     private Integer maxWaitMinutes;
     @Builder.Default
     private List<String> estimatedFields = new ArrayList<>();
+    @JsonAlias("telefono")
+    private String phone;
+    @JsonAlias("embarazo")
+    private Boolean pregnant;
+    @JsonAlias("semanasGestacion")
+    private Integer gestationWeeks;
+    @JsonAlias("evaluadoPor")
+    private String evaluatedBy;
+    /** Inicio de la visita; la espera se mide desde aquí aunque lo hayan vuelto a evaluar. */
+    private OffsetDateTime arrivedAt;
+    private OffsetDateTime careStartedAt;
+    /** false: se registró pero no está en la sala. */
+    private Boolean present;
+    private OffsetDateTime notifiedAt;
+    private String notifiedChannel;
+    /** Calculados por la cola sobre la espera actual. */
+    private Integer waitedMinutes;
+    private Integer minutesLeft;
+    private Boolean overdue;
 }

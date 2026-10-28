@@ -7,6 +7,8 @@ import com.hospital.triage.evaluation.application.service.EvaluationService;
 import com.hospital.triage.grpc.mapping.RankedPatientMessages;
 import com.hospital.triage.grpc.v1.CareStatusUpdate;
 import com.hospital.triage.grpc.v1.EvaluationAccessGrpc;
+import com.hospital.triage.grpc.v1.NotifyMark;
+import com.hospital.triage.grpc.v1.PresenceUpdate;
 import com.hospital.triage.grpc.v1.PositionBatch;
 import com.hospital.triage.grpc.v1.RankedPatient;
 import com.hospital.triage.grpc.v1.RankedPatientList;
@@ -95,6 +97,35 @@ public class EvaluationAccessGrpcService extends EvaluationAccessGrpc.Evaluation
             responseObserver.onCompleted();
         } catch (RuntimeException ex) {
             responseObserver.onError(Status.INTERNAL.withDescription(ex.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void markNotified(NotifyMark request, StreamObserver<RankedPatient> responseObserver) {
+        UUID patientId = parse(request.getPatientId(), responseObserver);
+        if (patientId == null) {
+            return;
+        }
+        reply(responseObserver, () -> evaluations.markNotified(patientId, request.getChannel()));
+    }
+
+    @Override
+    public void setPresence(PresenceUpdate request, StreamObserver<RankedPatient> responseObserver) {
+        UUID patientId = parse(request.getPatientId(), responseObserver);
+        if (patientId == null) {
+            return;
+        }
+        reply(responseObserver, () -> evaluations.setPresence(patientId, request.getPresent()));
+    }
+
+    private void reply(StreamObserver<RankedPatient> observer, java.util.function.Supplier<RankedPatientDTO> action) {
+        try {
+            observer.onNext(RankedPatientMessages.toProto(action.get()));
+            observer.onCompleted();
+        } catch (PatientNotFoundException ex) {
+            observer.onError(Status.NOT_FOUND.withDescription(ex.getMessage()).asRuntimeException());
+        } catch (RuntimeException ex) {
+            observer.onError(Status.INTERNAL.withDescription(ex.getMessage()).asRuntimeException());
         }
     }
 
