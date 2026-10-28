@@ -119,6 +119,51 @@ class TriageServiceTest {
     }
 
     @Test
+    @DisplayName("TC-11: Conciencia AVPU: no responde -> crítico; solo a la voz -> mínimo 78; confusión suma 3 a NEWS2")
+    void tc11_conciencia() {
+        BigDecimal t = BigDecimal.valueOf(36.6);
+        var noResponde = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, null, "U");
+        assertThat(noResponde.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
+        assertThat(noResponde.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
+
+        var voz = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, null, "V");
+        assertThat(voz.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(78.0));
+
+        var confuso = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, null, "c");
+        var alerta = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, null, "A");
+        assertThat(confuso.news2()).isEqualTo(alerta.news2() + 3);
+        assertThat(confuso.score()).isGreaterThan(alerta.score());
+    }
+
+    @Test
+    @DisplayName("TC-12: Glucosa extrema sube el piso; un dato ausente no cambia el puntaje")
+    void tc12_glucosa() {
+        BigDecimal t = BigDecimal.valueOf(36.6);
+        var base = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "");
+        var sinDatos = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, null, null);
+        assertThat(sinDatos.score()).isEqualTo(base.score());
+
+        assertThat(triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", 45, null, null).score())
+                .isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
+        assertThat(triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", 450, null, null).score())
+                .isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", 110, null, null).score())
+                .isEqualTo(base.score());
+    }
+
+    @Test
+    @DisplayName("TC-13: Dolor de 8 a 10 suma poco; el antecedente renal 'erc' cuenta")
+    void tc13_dolorYRenal() {
+        BigDecimal t = BigDecimal.valueOf(36.6);
+        var sinDolor = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, 3, null);
+        var dolorFuerte = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "", null, 9, null);
+        assertThat(dolorFuerte.score().subtract(sinDolor.score())).isEqualByComparingTo(BigDecimal.valueOf(4.0));
+
+        var renal = triageService.calculate(40, 80, 98, 120, 80, t, 16, "cefalea", "erc");
+        assertThat(renal.score()).isGreaterThan(sinDolor.score());
+    }
+
+    @Test
     @DisplayName("TC-09: Validación fisiológica: Presión arterial incoherente (PAS < PAD)")
     void tc09_validacionPresionIncoherente() {
         assertThatThrownBy(() -> triageService.calculate(

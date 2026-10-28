@@ -47,7 +47,7 @@ public class TriageEvaluation {
     private TriageLevel triageLevel;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 24)
+    @Column(name = "estado", nullable = false, length = 24)
     private CareStatus status = CareStatus.EN_ESPERA;
 
     @Column(name = "posicion_cola")
@@ -62,6 +62,22 @@ public class TriageEvaluation {
     @Column(name = "fuente_score", length = 24)
     private String scoreSource;
 
-    @Column(name = "explicacion_ia", length = 4000)
+    @Column(name = "explicacion_ia", columnDefinition = "TEXT")
     private String aiExplanation;
+
+    @Column(name = "area_destino", length = 40)
+    private String destinationArea;
+
+    @Column(name = "codigo_destino", length = 60)
+    private String destinationCode;
+
+    @Column(name = "motivo_destino", length = 300)
+    private String destinationReason;
+
+    @Column(name = "espera_max_min")
+    private Integer maxWaitMinutes;
+
+    /** Signos que estimó la IA en lugar de medirse, separados por coma. */
+    @Column(name = "campos_estimados", length = 200)
+    private String estimatedFields;
 }

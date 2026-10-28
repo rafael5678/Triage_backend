@@ -44,19 +44,48 @@ public class TriageService {
 
     public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
                                 int respiratoryRate, String conditionId, String history) {
+        return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                conditionId, history, null, null, null);
+    }
+
+    /**
+     * glucose en mg/dL, painScale 0-10 y consciousness en AVPU son opcionales.
+     * Solo pueden subir el puntaje: un dato ausente no resta.
+     */
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history,
+                                Integer glucose, Integer painScale, String consciousness) {
         validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
-        int news = news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate);
+        String avpu = avpu(consciousness);
+        int news = news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate) + consciousnessPoints(avpu);
         double shock = heartRate / (double) Math.max(40, systolic);
         int condition = conditionSeverity(conditionId);
         int comorb = scoreHistory(history);
 
-        double score = condition * 0.38 + (news / 20.0) * 100 * 0.42
+        double score = condition * 0.38 + (Math.min(20, news) / 20.0) * 100 * 0.42
                 + Math.min(25, (shock - 0.5) * 40)
                 + Math.min(12, age / 10.0) * 0.35
                 + comorb * 0.55;
 
+        if (painScale != null && painScale >= 8) {
+            score += 4;
+        }
         if (spo2 < 85 || systolic < 80 || respiratoryRate < 8 || heartRate > 150) {
             score = Math.max(score, 86);
+        }
+        if ("P".equals(avpu) || "U".equals(avpu)) {
+            score = Math.max(score, 86);
+        } else if ("V".equals(avpu)) {
+            score = Math.max(score, 78);
+        }
+        if (glucose != null) {
+            if (glucose < 54) {
+                score = Math.max(score, 86);
+            } else if (glucose > 600) {
+                score = Math.max(score, 78);
+            } else if (glucose < 70 || glucose > 400) {
+                score = Math.max(score, 62);
+            }
         }
         if ("paro".equals(conditionId)) {
             score = Math.max(score, 97);
@@ -132,6 +161,19 @@ public class TriageService {
         return s;
     }
 
+    /** NEWS2 suma 3 puntos por cualquier conciencia distinta de alerta (C, V, P o U). */
+    static int consciousnessPoints(String avpu) {
+        return avpu == null || "A".equals(avpu) ? 0 : 3;
+    }
+
+    static String avpu(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String value = raw.trim().toUpperCase();
+        return value.length() == 1 && "ACVPU".contains(value) ? value : null;
+    }
+
     private int scoreHistory(String texto) {
         if (texto == null) return 0;
         String t = texto.toLowerCase();
@@ -139,7 +181,7 @@ public class TriageService {
         if (t.contains("infarto") || t.contains("iam")) p += 10;
         if (t.contains("falla") || t.contains("icc")) p += 9;
         if (t.contains("epoc") || t.contains("asma")) p += 8;
-        if (t.contains("renal")) p += 7;
+        if (t.contains("renal") || t.contains("erc")) p += 7;
         if (t.contains("diabetes") || t.contains("dm")) p += 4;
         if (t.contains("hipertens") || t.contains("hta")) p += 3;
         if (t.contains("cancer")) p += 6;

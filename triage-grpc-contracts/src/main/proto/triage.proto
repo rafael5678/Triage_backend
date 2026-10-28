@@ -68,6 +68,12 @@ message AssistRequest {
   double protocol_score = 12;
   int32 news2 = 13;
   optional double local_model_score = 14;
+  bytes image = 15;
+  string image_mime = 16;
+  optional int32 glucose = 17;
+  optional int32 pain_scale = 18;
+  string consciousness = 19;
+  repeated string estimated_fields = 20;
 }
 
 message AssistReply {
@@ -80,6 +86,13 @@ message AssistReply {
   repeated string gemini_reasons = 7;
   optional double protocol_score = 8;
   optional double local_model_score = 9;
+  repeated string immediate_actions = 10;
+  repeated string tests_to_order = 11;
+  repeated string monitoring = 12;
+  repeated string red_flags = 13;
+  string symptom_explanation = 14;
+  string suggested_area = 15;
+  string photo_findings = 16;
 }
 
 message AiHealth {
@@ -148,4 +161,18 @@ message RankedPatient {
   repeated string ai_reasons = 28;
   repeated string dataset_reasons = 29;
   repeated string gemini_reasons = 30;
+  optional int32 glucose = 31;
+  optional int32 pain_scale = 32;
+  string consciousness = 33;
+  repeated string immediate_actions = 34;
+  repeated string tests_to_order = 35;
+  repeated string monitoring = 36;
+  repeated string red_flags = 37;
+  string symptom_explanation = 38;
+  string photo_findings = 39;
+  string destination_area = 40;
+  string destination_code = 41;
+  string destination_reason = 42;
+  optional int32 max_wait_minutes = 43;
+  repeated string estimated_fields = 44;
 }

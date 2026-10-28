@@ -40,7 +40,7 @@ public class VitalSigns {
     @Column(name = "pad", nullable = false)
     private Integer diastolic;
 
-    @Column(nullable = false, precision = 4, scale = 1)
+    @Column(name = "temperatura", nullable = false, precision = 4, scale = 1)
     private BigDecimal temperature;
 
     @Column(name = "frecuencia_respiratoria", nullable = false)
@@ -48,4 +48,14 @@ public class VitalSigns {
 
     @Column(name = "registrado_en", nullable = false)
     private OffsetDateTime recordedAt = OffsetDateTime.now();
+
+    @Column(name = "glucosa")
+    private Integer glucose;
+
+    @Column(name = "dolor")
+    private Integer painScale;
+
+    /** Escala AVPU: A, C, V, P o U. */
+    @Column(name = "conciencia", length = 1)
+    private String consciousness;
 }

@@ -1,8 +1,9 @@
 package com.hospital.triage.ai.infrastructure.grpc;
 
+import com.hospital.triage.ai.application.service.ClinicalCase;
 import com.hospital.triage.ai.application.service.GeminiTriageService;
 import com.hospital.triage.ai.infrastructure.persistence.SymptomRepository;
-import com.hospital.triage.common.dto.AiAssistDTO;
+import com.hospital.triage.grpc.mapping.AssistMessages;
 import com.hospital.triage.grpc.v1.AiHealth;
 import com.hospital.triage.grpc.v1.AssistReply;
 import com.hospital.triage.grpc.v1.AssistRequest;
@@ -14,6 +15,8 @@ import io.grpc.stub.StreamObserver;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Base64;
 
 @Component
 public class ClinicalAiGrpcService extends ClinicalAiGrpc.ClinicalAiImplBase {
@@ -28,24 +31,29 @@ public class ClinicalAiGrpcService extends ClinicalAiGrpc.ClinicalAiImplBase {
 
     @Override
     public void assist(AssistRequest request, StreamObserver<AssistReply> responseObserver) {
-        Double local = request.hasLocalModelScore() ? request.getLocalModelScore() : null;
-        AiAssistDTO dto = gemini.assist(
-                blankToNull(request.getConditionId()),
-                request.getReason(),
-                request.getHistory(),
-                request.getAge(),
-                blankToNull(request.getSex()),
-                request.getHeartRate(),
-                request.getSpo2(),
-                request.getSystolic(),
-                request.getDiastolic(),
-                BigDecimal.valueOf(request.getTemperature()),
-                request.getRespiratoryRate(),
-                request.getProtocolScore(),
-                request.getNews2(),
-                local
-        );
-        responseObserver.onNext(toReply(dto));
+        ClinicalCase clinicalCase = ClinicalCase.builder()
+                .conditionId(blankToNull(request.getConditionId()))
+                .reason(request.getReason())
+                .history(request.getHistory())
+                .age(request.getAge())
+                .sex(blankToNull(request.getSex()))
+                .heartRate(request.getHeartRate())
+                .spo2(request.getSpo2())
+                .systolic(request.getSystolic())
+                .diastolic(request.getDiastolic())
+                .temperature(BigDecimal.valueOf(request.getTemperature()))
+                .respiratoryRate(request.getRespiratoryRate())
+                .glucose(request.hasGlucose() ? request.getGlucose() : null)
+                .painScale(request.hasPainScale() ? request.getPainScale() : null)
+                .consciousness(blankToNull(request.getConsciousness()))
+                .estimatedFields(new ArrayList<>(request.getEstimatedFieldsList()))
+                .photoBase64(request.getImage().isEmpty() ? null : Base64.getEncoder().encodeToString(request.getImage().toByteArray()))
+                .photoMime(blankToNull(request.getImageMime()))
+                .protocolScore(request.getProtocolScore())
+                .news2(request.getNews2())
+                .localModelScore(request.hasLocalModelScore() ? request.getLocalModelScore() : null)
+                .build();
+        responseObserver.onNext(AssistMessages.toReply(gemini.assist(clinicalCase)));
         responseObserver.onCompleted();
     }
 
@@ -67,37 +75,7 @@ public class ClinicalAiGrpcService extends ClinicalAiGrpc.ClinicalAiImplBase {
         responseObserver.onCompleted();
     }
 
-    private AssistReply toReply(AiAssistDTO dto) {
-        AssistReply.Builder builder = AssistReply.newBuilder()
-                .setActive(dto.isActive())
-                .setDangerLead(text(dto.getDangerLead()))
-                .setMeaning(text(dto.getMeaning()));
-        if (dto.getSuggestedScore() != null) {
-            builder.setSuggestedScore(dto.getSuggestedScore());
-        }
-        if (dto.getProtocolScore() != null) {
-            builder.setProtocolScore(dto.getProtocolScore());
-        }
-        if (dto.getLocalModelScore() != null) {
-            builder.setLocalModelScore(dto.getLocalModelScore());
-        }
-        if (dto.getReasons() != null) {
-            builder.addAllReasons(dto.getReasons());
-        }
-        if (dto.getDatasetReasons() != null) {
-            builder.addAllDatasetReasons(dto.getDatasetReasons());
-        }
-        if (dto.getGeminiReasons() != null) {
-            builder.addAllGeminiReasons(dto.getGeminiReasons());
-        }
-        return builder.build();
-    }
-
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
-    }
-
-    private String text(String value) {
-        return value == null ? "" : value;
     }
 }

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,12 +15,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AnalyzeTriageDTO {
+public class AnalyzeTriageDTO implements ExtraFindings {
     @NotBlank
     @Size(max = 160)
     @JsonAlias("nombre")
@@ -76,4 +79,25 @@ public class AnalyzeTriageDTO {
 
     @JsonAlias("scoreModeloLocal")
     private Double localModelScore;
+
+    @Min(10) @Max(1500)
+    @JsonAlias("glucosa")
+    private Integer glucose;
+
+    @Min(0) @Max(10)
+    @JsonAlias("dolor")
+    private Integer painScale;
+
+    @Pattern(regexp = "^[ACVPUacvpu]?$")
+    @JsonAlias("conciencia")
+    private String consciousness;
+
+    @Size(max = 4_000_000)
+    private String photoBase64;
+
+    @Size(max = 40)
+    private String photoMime;
+
+    @Builder.Default
+    private List<String> estimatedFields = new ArrayList<>();
 }

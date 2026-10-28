@@ -7,6 +7,8 @@ import com.hospital.triage.evaluation.application.port.PatientSnapshot;
 import com.hospital.triage.evaluation.domain.entity.TriageEvaluation;
 import com.hospital.triage.evaluation.domain.entity.VitalSigns;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 final class RankedPatientAssembler {
@@ -40,9 +42,20 @@ final class RankedPatientAssembler {
                     .aiMeaning(ia.getMeaning())
                     .protocolScore(ia.getProtocolScore())
                     .geminiScore(ia.getSuggestedScore())
-                    .aiReasons(ia.getReasons() == null ? List.of() : ia.getReasons())
-                    .datasetReasons(ia.getDatasetReasons() == null ? List.of() : ia.getDatasetReasons())
-                    .geminiReasons(ia.getGeminiReasons() == null ? List.of() : ia.getGeminiReasons());
+                    .aiReasons(orEmpty(ia.getReasons()))
+                    .datasetReasons(orEmpty(ia.getDatasetReasons()))
+                    .geminiReasons(orEmpty(ia.getGeminiReasons()))
+                    .immediateActions(orEmpty(ia.getImmediateActions()))
+                    .testsToOrder(orEmpty(ia.getTestsToOrder()))
+                    .monitoring(orEmpty(ia.getMonitoring()))
+                    .redFlags(orEmpty(ia.getRedFlags()))
+                    .symptomExplanation(ia.getSymptomExplanation())
+                    .photoFindings(ia.getPhotoFindings())
+                    .destinationArea(evaluation.getDestinationArea())
+                    .destinationCode(evaluation.getDestinationCode())
+                    .destinationReason(evaluation.getDestinationReason())
+                    .maxWaitMinutes(evaluation.getMaxWaitMinutes())
+                    .estimatedFields(splitFields(evaluation.getEstimatedFields()));
         }
 
         if (signs != null) {
@@ -51,9 +64,27 @@ final class RankedPatientAssembler {
                     .systolic(signs.getSystolic())
                     .diastolic(signs.getDiastolic())
                     .temperature(signs.getTemperature())
-                    .respiratoryRate(signs.getRespiratoryRate());
+                    .respiratoryRate(signs.getRespiratoryRate())
+                    .glucose(signs.getGlucose())
+                    .painScale(signs.getPainScale())
+                    .consciousness(signs.getConsciousness());
         }
         return builder.build();
+    }
+
+    static String joinFields(List<String> fields) {
+        if (fields == null || fields.isEmpty()) {
+            return null;
+        }
+        String joined = String.join(",", fields.stream().filter(f -> f != null && !f.isBlank()).map(String::trim).toList());
+        return joined.isBlank() ? null : joined.substring(0, Math.min(200, joined.length()));
+    }
+
+    static List<String> splitFields(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
     }
 
     static String serializeAi(AiAssistDTO ia, ObjectMapper json) {
@@ -62,6 +93,10 @@ final class RankedPatientAssembler {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private static List<String> orEmpty(List<String> values) {
+        return values == null ? List.of() : values;
     }
 
     private static AiAssistDTO readAi(String raw, ObjectMapper json) {

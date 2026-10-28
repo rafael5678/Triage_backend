@@ -32,4 +32,15 @@ public class AiAssistDTO {
     private Double protocolScore;
     @JsonAlias("scoreModeloLocal")
     private Double localModelScore;
+    @Builder.Default
+    private List<String> immediateActions = new ArrayList<>();
+    @Builder.Default
+    private List<String> testsToOrder = new ArrayList<>();
+    @Builder.Default
+    private List<String> monitoring = new ArrayList<>();
+    @Builder.Default
+    private List<String> redFlags = new ArrayList<>();
+    private String symptomExplanation;
+    private String suggestedArea;
+    private String photoFindings;
 }

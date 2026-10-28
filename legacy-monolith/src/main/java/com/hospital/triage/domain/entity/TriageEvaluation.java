@@ -38,7 +38,7 @@ public class TriageEvaluation {
     private TriageLevel triageLevel;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 24)
+    @Column(name = "estado", nullable = false, length = 24)
     private CareStatus status = CareStatus.EN_ESPERA;
 
     @Column(name = "posicion_cola")

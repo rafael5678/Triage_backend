@@ -1,8 +1,11 @@
 package com.hospital.triage.queue.api;
 
+import com.hospital.triage.common.dto.BoardEntryDTO;
 import com.hospital.triage.common.dto.QueueStateDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
+import com.hospital.triage.common.dto.TriageStatsDTO;
 import com.hospital.triage.common.enums.CareStatus;
+import com.hospital.triage.queue.application.service.InsightService;
 import com.hospital.triage.queue.application.service.QueueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +25,7 @@ import java.util.UUID;
 public class QueueController {
 
     private final QueueService queueService;
+    private final InsightService insights;
 
     @GetMapping({"/health", "/salud"})
     public Map<String, String> health() {
@@ -40,6 +44,17 @@ public class QueueController {
     @GetMapping({"/patients", "/pacientes"})
     public List<RankedPatientDTO> patients() {
         return queueService.all();
+    }
+
+    @GetMapping({"/stats", "/estadisticas"})
+    public TriageStatsDTO stats() {
+        return insights.stats();
+    }
+
+    /** Pantalla pública de sala: sin nombres ni documento completo. */
+    @GetMapping({"/board", "/tablero"})
+    public List<BoardEntryDTO> board() {
+        return insights.board();
     }
 
     @PatchMapping({"/care/{patientId}", "/atender/{patientId}"})

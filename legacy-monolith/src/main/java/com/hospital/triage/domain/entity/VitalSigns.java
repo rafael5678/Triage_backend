@@ -36,7 +36,7 @@ public class VitalSigns {
     @Column(name = "pad", nullable = false)
     private Integer diastolic;
 
-    @Column(nullable = false, precision = 4, scale = 1)
+    @Column(name = "temperatura", nullable = false, precision = 4, scale = 1)
     private BigDecimal temperature;
 
     @Column(name = "frecuencia_respiratoria", nullable = false)

@@ -2,7 +2,10 @@ package com.hospital.triage.evaluation.infrastructure.grpc;
 
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.exception.PatientNotFoundException;
+import com.hospital.triage.evaluation.application.port.AssistInput;
 import com.hospital.triage.evaluation.application.port.ClinicalAiPort;
+import com.hospital.triage.grpc.mapping.AssistMessages;
+import com.google.protobuf.ByteString;
 import com.hospital.triage.evaluation.application.port.PatientLookupPort;
 import com.hospital.triage.evaluation.application.port.PatientSnapshot;
 import com.hospital.triage.evaluation.application.port.SymptomSeverityPort;
@@ -23,8 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,32 +82,63 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
     }
 
     @Override
-    public AiAssistDTO assist(String conditionId, String reason, String history, int age, String sex,
-                              int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
-                              int respiratoryRate, double protocolScore, int news2, Double localModelScore) {
-        AssistRequest.Builder request = AssistRequest.newBuilder()
-                .setConditionId(text(conditionId))
-                .setReason(text(reason))
-                .setHistory(text(history))
-                .setAge(age)
-                .setSex(text(sex))
-                .setHeartRate(heartRate)
-                .setSpo2(spo2)
-                .setSystolic(systolic)
-                .setDiastolic(diastolic)
-                .setTemperature(temperature == null ? 0 : temperature.doubleValue())
-                .setRespiratoryRate(respiratoryRate)
-                .setProtocolScore(protocolScore)
-                .setNews2(news2);
-        if (localModelScore != null) {
-            request.setLocalModelScore(localModelScore);
-        }
+    public AiAssistDTO assist(AssistInput input) {
+        AssistRequest request = toRequest(input);
         try {
-            AssistReply reply = ia.withDeadlineAfter(50, TimeUnit.SECONDS).assist(request.build());
-            return toAssist(reply);
+            AssistReply reply = ia.withDeadlineAfter(50, TimeUnit.SECONDS).assist(request);
+            return AssistMessages.toDto(reply);
         } catch (StatusRuntimeException ex) {
             log.warn("ms-ia-recomendacion no respondió, se usa solo el protocolo: {}", ex.getStatus().getCode());
-            return AiAssistDTO.builder().active(false).protocolScore(protocolScore).build();
+            return AiAssistDTO.builder().active(false).protocolScore(input.protocolScore()).build();
+        }
+    }
+
+    static AssistRequest toRequest(AssistInput input) {
+        AssistRequest.Builder request = AssistRequest.newBuilder()
+                .setConditionId(text(input.conditionId()))
+                .setReason(text(input.reason()))
+                .setHistory(text(input.history()))
+                .setAge(input.age())
+                .setSex(text(input.sex()))
+                .setHeartRate(input.heartRate())
+                .setSpo2(input.spo2())
+                .setSystolic(input.systolic())
+                .setDiastolic(input.diastolic())
+                .setTemperature(input.temperature() == null ? 0 : input.temperature().doubleValue())
+                .setRespiratoryRate(input.respiratoryRate())
+                .setConsciousness(text(input.consciousness()))
+                .setProtocolScore(input.protocolScore())
+                .setNews2(input.news2());
+        if (input.localModelScore() != null) {
+            request.setLocalModelScore(input.localModelScore());
+        }
+        if (input.glucose() != null) {
+            request.setGlucose(input.glucose());
+        }
+        if (input.painScale() != null) {
+            request.setPainScale(input.painScale());
+        }
+        if (input.estimatedFields() != null) {
+            request.addAllEstimatedFields(input.estimatedFields());
+        }
+        byte[] image = decodePhoto(input.photoBase64());
+        if (image.length > 0) {
+            request.setImage(ByteString.copyFrom(image))
+                    .setImageMime(input.photoMime() == null || input.photoMime().isBlank() ? "image/jpeg" : input.photoMime());
+        }
+        return request.build();
+    }
+
+    static byte[] decodePhoto(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return new byte[0];
+        }
+        int comma = raw.indexOf(',');
+        String data = raw.startsWith("data:") && comma > 0 ? raw.substring(comma + 1) : raw;
+        try {
+            return Base64.getMimeDecoder().decode(data.trim());
+        } catch (IllegalArgumentException ex) {
+            return new byte[0];
         }
     }
 
@@ -154,21 +187,7 @@ public class GrpcEvaluationClients implements PatientLookupPort, ClinicalAiPort,
         );
     }
 
-    private AiAssistDTO toAssist(AssistReply reply) {
-        return AiAssistDTO.builder()
-                .active(reply.getActive())
-                .suggestedScore(reply.hasSuggestedScore() ? reply.getSuggestedScore() : null)
-                .dangerLead(emptyToNull(reply.getDangerLead()))
-                .meaning(emptyToNull(reply.getMeaning()))
-                .reasons(new ArrayList<>(reply.getReasonsList()))
-                .datasetReasons(new ArrayList<>(reply.getDatasetReasonsList()))
-                .geminiReasons(new ArrayList<>(reply.getGeminiReasonsList()))
-                .protocolScore(reply.hasProtocolScore() ? reply.getProtocolScore() : null)
-                .localModelScore(reply.hasLocalModelScore() ? reply.getLocalModelScore() : null)
-                .build();
-    }
-
-    private String text(String value) {
+    private static String text(String value) {
         return value == null ? "" : value;
     }
 

@@ -70,7 +70,33 @@ public final class RankedPatientMessages {
         if (dto.getGeminiReasons() != null) {
             builder.addAllGeminiReasons(dto.getGeminiReasons());
         }
+        if (dto.getGlucose() != null) {
+            builder.setGlucose(dto.getGlucose());
+        }
+        if (dto.getPainScale() != null) {
+            builder.setPainScale(dto.getPainScale());
+        }
+        if (dto.getMaxWaitMinutes() != null) {
+            builder.setMaxWaitMinutes(dto.getMaxWaitMinutes());
+        }
+        builder.setConsciousness(text(dto.getConsciousness()))
+                .setSymptomExplanation(text(dto.getSymptomExplanation()))
+                .setPhotoFindings(text(dto.getPhotoFindings()))
+                .setDestinationArea(text(dto.getDestinationArea()))
+                .setDestinationCode(text(dto.getDestinationCode()))
+                .setDestinationReason(text(dto.getDestinationReason()));
+        addAll(dto.getImmediateActions(), builder::addAllImmediateActions);
+        addAll(dto.getTestsToOrder(), builder::addAllTestsToOrder);
+        addAll(dto.getMonitoring(), builder::addAllMonitoring);
+        addAll(dto.getRedFlags(), builder::addAllRedFlags);
+        addAll(dto.getEstimatedFields(), builder::addAllEstimatedFields);
         return builder.build();
+    }
+
+    private static void addAll(java.util.List<String> values, java.util.function.Consumer<Iterable<String>> sink) {
+        if (values != null) {
+            sink.accept(values);
+        }
     }
 
     public static RankedPatientDTO toDto(RankedPatient message) {
@@ -92,7 +118,28 @@ public final class RankedPatientMessages {
                 .aiMeaning(emptyToNull(message.getAiMeaning()))
                 .aiReasons(new ArrayList<>(message.getAiReasonsList()))
                 .datasetReasons(new ArrayList<>(message.getDatasetReasonsList()))
-                .geminiReasons(new ArrayList<>(message.getGeminiReasonsList()));
+                .geminiReasons(new ArrayList<>(message.getGeminiReasonsList()))
+                .consciousness(emptyToNull(message.getConsciousness()))
+                .immediateActions(new ArrayList<>(message.getImmediateActionsList()))
+                .testsToOrder(new ArrayList<>(message.getTestsToOrderList()))
+                .monitoring(new ArrayList<>(message.getMonitoringList()))
+                .redFlags(new ArrayList<>(message.getRedFlagsList()))
+                .symptomExplanation(emptyToNull(message.getSymptomExplanation()))
+                .photoFindings(emptyToNull(message.getPhotoFindings()))
+                .destinationArea(emptyToNull(message.getDestinationArea()))
+                .destinationCode(emptyToNull(message.getDestinationCode()))
+                .destinationReason(emptyToNull(message.getDestinationReason()))
+                .estimatedFields(new ArrayList<>(message.getEstimatedFieldsList()));
+
+        if (message.hasGlucose()) {
+            builder.glucose(message.getGlucose());
+        }
+        if (message.hasPainScale()) {
+            builder.painScale(message.getPainScale());
+        }
+        if (message.hasMaxWaitMinutes()) {
+            builder.maxWaitMinutes(message.getMaxWaitMinutes());
+        }
 
         if (message.hasRiskScore()) {
             builder.riskScore(BigDecimal.valueOf(message.getRiskScore()).setScale(1, RoundingMode.HALF_UP));

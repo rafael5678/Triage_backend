@@ -31,7 +31,8 @@ public class EvaluationStore {
     private final TriageEvaluationRepository evaluations;
     private final ObjectMapper json;
 
-    public RankedPatientDTO save(PatientSnapshot patient, VitalSignsDTO dto, TriageService.RiskResult result, AiAssistDTO ia) {
+    public RankedPatientDTO save(PatientSnapshot patient, VitalSignsDTO dto, TriageService.RiskResult result, AiAssistDTO ia,
+                                 DestinationService.Destination destination) {
         VitalSigns signs = new VitalSigns();
         signs.setPatientId(patient.id());
         signs.setHeartRate(dto.getHeartRate());
@@ -40,6 +41,9 @@ public class EvaluationStore {
         signs.setDiastolic(dto.getDiastolic());
         signs.setTemperature(dto.getTemperature());
         signs.setRespiratoryRate(dto.getRespiratoryRate());
+        signs.setGlucose(dto.getGlucose());
+        signs.setPainScale(dto.getPainScale());
+        signs.setConsciousness(TriageService.avpu(dto.getConsciousness()));
         signs.setRecordedAt(OffsetDateTime.now());
         vitalSignsRepo.save(signs);
 
@@ -55,8 +59,17 @@ public class EvaluationStore {
         evaluation.setEvaluatedAt(OffsetDateTime.now());
         evaluation.setScoreSource(ia.isActive() ? "HYBRID" : "PROTOCOL");
         evaluation.setAiExplanation(RankedPatientAssembler.serializeAi(ia, json));
+        evaluation.setDestinationArea(destination.area().label());
+        evaluation.setDestinationCode(destination.code());
+        evaluation.setDestinationReason(truncate(destination.reason(), 300));
+        evaluation.setMaxWaitMinutes(destination.maxWaitMinutes());
+        evaluation.setEstimatedFields(RankedPatientAssembler.joinFields(dto.getEstimatedFields()));
         evaluations.save(evaluation);
         return RankedPatientAssembler.toDto(patient, evaluation, signs, evaluation.getQueuePosition(), json);
+    }
+
+    private static String truncate(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max);
     }
 
     @Transactional(readOnly = true)

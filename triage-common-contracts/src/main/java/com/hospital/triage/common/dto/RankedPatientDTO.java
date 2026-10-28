@@ -77,4 +77,26 @@ public class RankedPatientDTO {
     @Builder.Default
     @JsonAlias("razonesGemini")
     private List<String> geminiReasons = new ArrayList<>();
+    @JsonAlias("glucosa")
+    private Integer glucose;
+    @JsonAlias("dolor")
+    private Integer painScale;
+    @JsonAlias("conciencia")
+    private String consciousness;
+    @Builder.Default
+    private List<String> immediateActions = new ArrayList<>();
+    @Builder.Default
+    private List<String> testsToOrder = new ArrayList<>();
+    @Builder.Default
+    private List<String> monitoring = new ArrayList<>();
+    @Builder.Default
+    private List<String> redFlags = new ArrayList<>();
+    private String symptomExplanation;
+    private String photoFindings;
+    private String destinationArea;
+    private String destinationCode;
+    private String destinationReason;
+    private Integer maxWaitMinutes;
+    @Builder.Default
+    private List<String> estimatedFields = new ArrayList<>();
 }
