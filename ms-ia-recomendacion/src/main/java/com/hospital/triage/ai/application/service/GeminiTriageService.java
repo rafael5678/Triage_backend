@@ -29,7 +29,7 @@ public class GeminiTriageService {
     @Value("${app.gemini.api-key:}")
     private String apiKey;
 
-    @Value("${app.gemini.model:gemini-2.0-flash}")
+    @Value("${app.gemini.model:gemini-3.8-flash}")
     private String model;
 
     public GeminiTriageService(ObjectMapper json, SymptomRepository symptoms) {
@@ -93,16 +93,18 @@ public class GeminiTriageService {
             payload.set("contents", json.createArrayNode().add(content));
             var gen = json.createObjectNode();
             gen.put("temperature", 0.15);
-            gen.put("maxOutputTokens", 512);
+            // Los modelos Gemini 3 gastan tokens de salida pensando; con 512 la respuesta llega cortada.
+            gen.put("maxOutputTokens", 2048);
             gen.put("responseMimeType", "application/json");
             payload.set("generationConfig", gen);
             String body = json.writeValueAsString(payload);
 
             String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                    + model + ":generateContent?key=" + apiKey.trim();
+                    + (model == null || model.isBlank() ? "gemini-3.8-flash" : model.trim()) + ":generateContent";
             HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(25))
                     .header("Content-Type", "application/json")
+                    .header("x-goog-api-key", apiKey.trim())
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
@@ -111,8 +113,15 @@ public class GeminiTriageService {
                 return AiAssistDTO.builder().active(false).build();
             }
             JsonNode root = json.readTree(res.body());
-            String text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
+            String text = "";
+            for (JsonNode part : root.path("candidates").path(0).path("content").path("parts")) {
+                if (!part.path("thought").asBoolean(false) && part.hasNonNull("text")) {
+                    text = part.path("text").asText("");
+                    break;
+                }
+            }
             if (text.isBlank()) {
+                log.warn("Gemini respondió sin texto: {}", root.path("candidates").path(0).path("finishReason").asText(""));
                 return AiAssistDTO.builder().active(false).build();
             }
             JsonNode parsed = json.readTree(text);
