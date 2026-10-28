@@ -7,6 +7,6 @@ Cuatro microservicios Spring Boot 3.3 (Java 17). El frontend entra por REST y lo
 - `ms-cola-espera` — orden de la sala, 8083
 - `ms-ia-recomendacion` — Gemini y catálogo, 8084
 
-Detalle en `docs/ARCHITECTURE.md`. Despliegue en `docs/DEPLOYMENT_CLOUD_RUN.md`.
+Detalle en `docs/ARCHITECTURE.md`. Despliegue en `docs/DEPLOYMENT_AZURE.md` (o `docs/DEPLOYMENT_CLOUD_RUN.md`).
 
 Salud: `GET /api/v1/health` en pacientes y `GET /api/v1/triage/health` en evaluación, cola e IA.

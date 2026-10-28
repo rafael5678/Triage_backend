@@ -34,6 +34,6 @@ O todo junto: `docker compose up --build`.
 
 El frontend usa `VITE_AUTH_URL`, `VITE_EVAL_URL`, `VITE_QUEUE_URL` y `VITE_AI_URL`.
 
-Despliegue: `docs/DEPLOYMENT_CLOUD_RUN.md`.
+Despliegue: `docs/DEPLOYMENT_AZURE.md` (Azure Container Apps) o `docs/DEPLOYMENT_CLOUD_RUN.md`.
 
 `legacy-monolith` queda como referencia del proceso único en el puerto 8080. La aplicación ya no entra por ahí.

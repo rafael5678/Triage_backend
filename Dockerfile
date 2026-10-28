@@ -16,6 +16,7 @@ RUN mvn -q -DskipTests -pl ms-pacientes-auth,ms-evaluacion-triaje,ms-cola-espera
     && cp ms-ia-recomendacion/target/ms-ia-recomendacion-0.1.0.jar /jars/
 
 FROM eclipse-temurin:17-jre
+LABEL org.opencontainers.image.source=https://github.com/rafael5678/Triage_backend
 WORKDIR /app
 COPY --from=build /jars /app
 ENV MODULE=ms-pacientes-auth
