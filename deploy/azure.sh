@@ -6,7 +6,7 @@ set -euo pipefail
 
 LOCATION="${LOCATION:-westus2}"
 RG="${RG:-triage-rg}"
-ENV_NAME="${ENV_NAME:-triage-env-std}"
+ENV_NAME="${ENV_NAME:-triage-grpc}"
 IMAGE="${IMAGE:-ghcr.io/rafael5678/triage-backend:latest}"
 FRONTEND_DEFAULT="https://clasificador-predictivo-e.vercel.app"
 
@@ -22,21 +22,38 @@ if ! curl -fsS -o /dev/null \
   exit 1
 fi
 
-read -r -p "URL del frontend en Vercel [${FRONTEND_DEFAULT}]: " CORS_ORIGINS
-CORS_ORIGINS="${CORS_ORIGINS:-$FRONTEND_DEFAULT}"
-read -r -s -p "DATABASE_URL de Supabase (Session pooler, con la clave puesta): " DATABASE_URL; echo
-read -r -s -p "GEMINI_API_KEY: " GEMINI_API_KEY; echo
-read -r -s -p "Clave del usuario admin de la app: " ADMIN_PASSWORD; echo
-
 echo "== Preparando Azure en ${LOCATION}"
 az extension add --name containerapp --upgrade --only-show-errors --yes
 az provider register --namespace Microsoft.App --wait
 az group create -n "$RG" -l "$LOCATION" -o none
 # Un entorno express no acepta ingress HTTP/2, y gRPC lo necesita.
+# Sin --environment-mode explícito, la extensión puede crear uno express.
+PROFILE_ARGS=(--workload-profile-name Consumption)
 if ! az containerapp env show -n "$ENV_NAME" -g "$RG" >/dev/null 2>&1; then
-  az containerapp env create -n "$ENV_NAME" -g "$RG" -l "$LOCATION" \
-    --enable-workload-profiles true --logs-destination none -o none
+  if ! az containerapp env create -n "$ENV_NAME" -g "$RG" -l "$LOCATION" \
+      --environment-mode WorkloadProfiles --logs-destination none -o none; then
+    echo "== WorkloadProfiles no disponible, se usa ConsumptionOnly"
+    az containerapp env delete -n "$ENV_NAME" -g "$RG" --yes -o none 2>/dev/null || true
+    az containerapp env create -n "$ENV_NAME" -g "$RG" -l "$LOCATION" \
+      --environment-mode ConsumptionOnly --logs-destination none -o none
+  fi
 fi
+ENV_INFO="$(az containerapp env show -n "$ENV_NAME" -g "$RG" -o json)"
+if echo "$ENV_INFO" | grep -qi '"environmentMode": *"express"'; then
+  echo "El entorno ${ENV_NAME} quedó en modo express y no acepta HTTP/2."
+  echo "Bórralo con: az containerapp env delete -n ${ENV_NAME} -g ${RG} --yes"
+  exit 1
+fi
+if ! echo "$ENV_INFO" | grep -q '"workloadProfileType"'; then
+  PROFILE_ARGS=()
+fi
+echo "== Entorno ${ENV_NAME} listo"
+
+read -r -p "URL del frontend en Vercel [${FRONTEND_DEFAULT}]: " CORS_ORIGINS
+CORS_ORIGINS="${CORS_ORIGINS:-$FRONTEND_DEFAULT}"
+read -r -s -p "DATABASE_URL de Supabase (Session pooler, con la clave puesta): " DATABASE_URL; echo
+read -r -s -p "GEMINI_API_KEY: " GEMINI_API_KEY; echo
+read -r -s -p "Clave del usuario admin de la app: " ADMIN_PASSWORD; echo
 
 SECRETS=()
 
@@ -55,7 +72,7 @@ upsert() {
       extra=(--secrets "${SECRETS[@]}")
     fi
     az containerapp create -n "$name" -g "$RG" --environment "$ENV_NAME" --image "$IMAGE" \
-      --workload-profile-name Consumption \
+      "${PROFILE_ARGS[@]}" \
       --target-port 8080 --ingress external --transport "$transport" \
       --cpu 0.5 --memory 1.0Gi --min-replicas 0 --max-replicas 1 \
       "${extra[@]}" --env-vars "$@" -o none
