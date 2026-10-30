@@ -1,190 +1,253 @@
 ================================================================================
-TRIAGEIA — INFORME TÉCNICO DE TRANSFORMACIÓN A MICROSERVICIOS Y DESPLIEGUE AZURE
-Documento de Referencia y Traspaso de Estado del Proyecto
-Fecha: 29 de Octubre de 2026
+TRIAGEIA — GUÍA TÉCNICA MAESTRA PARA CURSOR / ASISTENTE DE IA
+ESTADO ACTUAL DEL PROYECTO, ARQUITECTURA DE MICROSERVICIOS Y DESPLIEGUE EN AZURE
+Fecha de actualización: 30 de Octubre de 2026
 ================================================================================
 
-ESTE DOCUMENTO ESTÁ DIRIGIDO AL EQUIPO DE DESARROLLO Y A CUALQUIER IA O
-ARQUITECTO QUE CONTINÚE EL PROYECTO TRIAGEIA.
-Detalla con precisión matemática qué se ha hecho, qué se ha modificado, qué se ha
-conservado intacto y cómo se gestiona el despliegue en Microsoft Azure.
+ESTE DOCUMENTO ES LA FUENTE ÚNICA DE VERDAD DEL PROYECTO TRIAGEIA.
+Léelo completamente antes de sugerir o modificar cualquier archivo del sistema.
+Describe con exactitud el estado actual, qué se eliminó, qué se conserva y cómo
+opera la arquitectura de microservicios y su despliegue en Microsoft Azure.
 
 --------------------------------------------------------------------------------
-1. PRINCIPIO DE CONTINUIDAD TECNOLÓGICA (LO QUE SE CONSERVA AL 100%)
+1. RESUMEN EJECUTIVO PARA CURSOR: QUÉ PASÓ Y EN QUÉ ESTADO ESTAMOS
 --------------------------------------------------------------------------------
-- Stack Tecnológico: Java 17 LTS, Spring Boot 3.3.x, Maven Reactor, gRPC, Protobuf.
-- Plataforma Cloud: Microsoft Azure (Azure Container Apps en región brazilsouth).
-- Grupo de Recursos: triage-brazilsouth (NO SE HA ELIMINADO NI REEMPLAZADO).
-- Entorno de Container Apps: triage-grpc (Plan Consumption con WorkloadProfiles).
-- Registro de Imágenes: GitHub Container Registry (ghcr.io/rafael5678/triage-backend).
-- Base de Datos: Supabase PostgreSQL (Postgres 15+, Session Pooler IPv4 con SSL).
-- Frontend: Vercel (React + Vite en https://clasificador-predictivo-e.vercel.app).
-- IA Clínica: Google Gemini API (gemini-1.5-flash / gemini-2.0-flash).
-
---------------------------------------------------------------------------------
-2. QUÉ SE HA CAMBIADO Y QUÉ SE HA HECHO (TRANSFORMACIÓN ARQUITECTÓNICA)
---------------------------------------------------------------------------------
-
-A. Modularización en Microservicios Reales Independientes:
-   El proyecto ha pasado de una estructura monolítica a un reactor Maven modular:
-   1. triage-common-contracts:
-      - Modelos de dominio compartidos, enumeraciones de Manchester, DTOs y validaciones.
-   2. triage-grpc-contracts:
-      - Definiciones Protocol Buffers (.proto) y compilación gRPC (stubs para Java).
-   3. api-gateway (NUEVO):
-      - Construido con Spring Cloud Gateway 2023 / Netty reactivo.
-      - Escucha en el puerto 8080.
-      - Centraliza el CORS para el frontend en Vercel.
-      - Enruta de forma transparente:
-        * /api/v1/auth/** y /api/v1/admin/users/** -> ms-pacientes-auth
-        * /api/v1/triage/patients (POST)          -> ms-pacientes-auth
-        * /api/v1/triage/patients (GET)           -> ms-cola-espera
-        * /api/v1/triage/evaluations/**           -> ms-evaluacion-triaje
-        * /api/v1/triage/analyze                  -> ms-evaluacion-triaje
-        * /api/v1/triage/care/**                  -> ms-cola-espera
-        * /api/v1/triage/events (SSE en vivo)     -> ms-cola-espera
-        * /api/v1/ia/**                           -> ms-ia-recomendacion
-        * /api/v1/catalog/** y /api/v1/admin/**   -> ms-ia-recomendacion
-   4. ms-pacientes-auth:
-      - Gestión de pacientes, fichas clínicas y autenticación JWT/BCrypt.
-   5. ms-evaluacion-triaje:
-      - Motor de cálculo de gravedad clínica (NEWS2, Manchester, reglas obstétricas y pediátricas).
-      - Historial de reevaluaciones de signos vitales.
-   6. ms-cola-espera:
-      - Cola de espera priorizada en memoria concurrente de alto rendimiento.
-      - Notificaciones en tiempo real vía Server-Sent Events (SSE).
-   7. ms-ia-recomendacion:
-      - Servicio de análisis clínico asistido por Gemini Flash.
-      - Fallback multimodelo y limitador de cuota en base de datos.
-   8. legacy-monolith:
-      - Respaldo histórico del código previo, conservado para auditoría.
-
-B. Dockerfiles y Soporte Multi-Contenedor:
-   - Se crearon Dockerfiles multi-stage independientes para cada microservicio:
-     * api-gateway/Dockerfile
-     * ms-pacientes-auth/Dockerfile
-     * ms-evaluacion-triaje/Dockerfile
-     * ms-cola-espera/Dockerfile
-     * ms-ia-recomendacion/Dockerfile
-   - Se actualizó el Dockerfile raíz para incluir la compilación de api-gateway-0.1.0.jar.
-     Ahora la imagen unificada ghcr.io/rafael5678/triage-backend:latest ejecuta cualquier
-     servicio usando la variable de entorno: MODULE=api-gateway (o el servicio deseado).
-
-C. Pipeline de Integración Continua (GitHub Actions):
-   - Archivo .github/workflows/imagen.yml actualizado para activarse en push a develop y main.
-   - Ejecuta las 49 pruebas unitarias y de integración (con base de datos real).
-   - Publica la imagen automáticamente en ghcr.io/rafael5678/triage-backend:latest.
-
-D. Resiliencia de Gemini AI:
-   - GeminiClient.java tiene tolerancia a fallos:
-     * Si un modelo devuelve HTTP 503 (servidor saturado) o 429 (límite de cuota),
-       prueba automáticamente el siguiente modelo configurado (gemini-1.5-flash -> gemini-2.0-flash).
-     * Si ambos fallan o se alcanza el tope diario de 150 llamadas, la función devuelve
-       degradación elegante (fallback clínico a protocolo NEWS2/Manchester) sin romper
-       el registro del paciente ni arrojar HTTP 500 al frontend.
+- El proyecto TriageIA (Sistema de Triaje Hospitalario Inteligente) completó su
+  migración de arquitectura monolítica a MICROSERVICIOS REALES INDEPENDIENTES.
+- EL MONOLITO (`legacy-monolith/`) HA SIDO ELIMINADO DEFINITIVAMENTE del código
+  activo. NO EXISTE ni debe volver a crearse.
+- Se eliminaron configuraciones y scripts obsoletos de plataformas que no usamos
+  (Google Cloud Run: `deploy/cloudrun.sh` y `docs/DEPLOYMENT_CLOUD_RUN.md`).
+- El backend consta ahora de 7 módulos Maven:
+  * 1 API Gateway reactivo (Spring Cloud Gateway en puerto 8080).
+  * 4 Microservicios de dominio (Spring Boot en puertos 8081, 8082, 8083 y 8084).
+  * 2 Módulos de contratos compartidos (Java común y gRPC / Protobuf).
+- La infraestructura en Microsoft Azure (`triage-brazilsouth` en `brazilsouth`)
+  SE CONSERVA AL 100% y se le incorporó el API Gateway como punto de entrada público.
+- La base de datos es Supabase PostgreSQL (Postgres 15+, Session Pooler con SSL).
+- El frontend está en Vercel (React + Vite) y consume la API a través del Gateway
+  sin haber cambiado una sola línea de código en React.
 
 --------------------------------------------------------------------------------
-3. INFRAESTRUCTURA Y DESPLIEGUE EN MICROSOFT AZURE (SIN CAMBIOS DESTRUCTIVOS)
+2. ESTRUCTURA ACTIVA Y DEFINITIVA DEL REPOSITORIO (Triage_backend)
 --------------------------------------------------------------------------------
-
-A. Recursos en Azure Container Apps:
-   - Resource Group: triage-brazilsouth
-   - Región: brazilsouth
-   - Environment: triage-grpc
-   - Aplicaciones existentes conservadas:
-     1. ms-pacientes-auth (Puerto 8080, Ingress externo/interno, HTTP/2)
-     2. ms-ia-recomendacion (Puerto 8080, Ingress externo/interno, HTTP/2)
-     3. ms-evaluacion-triaje (Puerto 8080, Ingress externo/interno, HTTP/2)
-     4. ms-cola-espera (Puerto 8080, Ingress externo/interno, auto)
-   - Nueva aplicación incorporada:
-     5. api-gateway (Puerto 8080, Ingress externo público, auto)
-
-B. Comandos Exactos para Azure Cloud Shell (Bash):
-
-1. DESPLIEGUE COMPLETO O RECONFIGURACIÓN (Script Interactivo):
-   Abre portal.azure.com -> Azure Cloud Shell (modo Bash):
-   ```bash
-   cd ~/Triage_backend 2>/dev/null || git clone https://github.com/rafael5678/Triage_backend.git ~/Triage_backend
-   cd ~/Triage_backend
-   git fetch origin
-   git checkout main
-   git pull origin main
-
-   LOCATION=brazilsouth RG=triage-brazilsouth bash deploy/azure.sh
-   ```
-   (El script solicitará interactivamente la DATABASE_URL de Supabase, la clave de
-   Gemini y la clave del administrador. Desplegará las 5 aplicaciones de forma idempotente).
-
-2. ACTUALIZACIÓN RÁPIDA DE LOS 5 SERVICIOS A LA ÚLTIMA IMAGEN DE GITHUB:
-   ```bash
-   for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera api-gateway; do
-     echo "== Actualizando $app =="
-     az containerapp update -n "$app" -g triage-brazilsouth \
-       --image ghcr.io/rafael5678/triage-backend:latest \
-       --revision-suffix "r$(date +%s)" -o none
-   done
-   ```
-
-3. ACTUALIZAR PARÁMETROS ESPECÍFICOS DE IA (GEMINI):
-   ```bash
-   az containerapp update -n ms-ia-recomendacion -g triage-brazilsouth \
-     --image ghcr.io/rafael5678/triage-backend:latest \
-     --revision-suffix "r$(date +%s)" \
-     --set-env-vars "GEMINI_MODEL=gemini-1.5-flash,gemini-2.0-flash" GEMINI_DAILY_LIMIT=150 GEMINI_PER_MINUTE_LIMIT=6 -o none
-   ```
-
-4. MONITOREO DE LOGS EN TIEMPO REAL:
-   ```bash
-   # Logs del API Gateway
-   az containerapp logs show -n api-gateway -g triage-brazilsouth --type console --tail 40 --format text
-
-   # Logs de Pacientes / Auth
-   az containerapp logs show -n ms-pacientes-auth -g triage-brazilsouth --type console --tail 40 --format text
-
-   # Logs de Evaluaciones
-   az containerapp logs show -n ms-evaluacion-triaje -g triage-brazilsouth --type console --tail 40 --format text
-   ```
+Triage_backend/
+├── pom.xml                        # Maven Parent Reactor (Orquesta los 7 módulos)
+├── docker-compose.yml             # Orquestador Docker local (PostgreSQL + 5 servicios)
+├── Dockerfile                     # Multi-stage Dockerfile unificado para GHCR
+├── .env.example                   # Variables de entorno documentadas
+├── README.md                      # Documentación principal actualizada
+├── api-gateway/                   # Microservicio 0: API Gateway (Puerto 8080)
+│   ├── pom.xml
+│   ├── Dockerfile
+│   └── src/main/resources/application.yml
+├── ms-pacientes-auth/             # Microservicio 1: Pacientes y Autenticación (8081)
+│   ├── pom.xml
+│   ├── Dockerfile
+│   └── src/...
+├── ms-evaluacion-triaje/          # Microservicio 2: Triaje Clínico y NEWS2 (8082)
+│   ├── pom.xml
+│   ├── Dockerfile
+│   └── src/...
+├── ms-cola-espera/                # Microservicio 3: Gestión de Cola y SSE en vivo (8083)
+│   ├── pom.xml
+│   ├── Dockerfile
+│   └── src/...
+├── ms-ia-recomendacion/           # Microservicio 4: Asistencia IA Gemini Flash (8084)
+│   ├── pom.xml
+│   ├── Dockerfile
+│   └── src/...
+├── triage-common-contracts/       # Contratos Java compartidos (DTOs, Enums, Excepciones)
+│   └── pom.xml
+├── triage-grpc-contracts/         # Protocol Buffers (triage.proto) y stubs gRPC
+│   └── pom.xml
+├── deploy/                        # Scripts de despliegue en Microsoft Azure
+│   ├── azure.sh                   # Script principal interactivo para Azure Cloud Shell
+│   ├── deploy-azure-cloudshell.sh # Script no destructivo e idempotente para ACA
+│   └── azure/                     # Variables de entorno y soporte ACA
+└── docs/                          # Documentación técnica categorizada (ADRs 1 a 7)
+    ├── api/                       # Especificación OpenAPI / REST
+    ├── arquitectura/              # Arquitectura distribuida y ADRs formales
+    ├── azure/                     # Arquitectura ACA, guías y costos Cloud
+    ├── base-datos/                # Esquemas y diccionario de datos
+    ├── despliegue/                # Guías de Docker local
+    ├── seguridad/                 # Políticas de roles y JWT
+    ├── testing/                   # Estrategia de pruebas automatizadas
+    ├── ASYNC_NOTIFICATIONS.md     # Server-Sent Events (SSE) y streaming
+    └── DEPLOYMENT_AZURE.md        # Guía maestra de despliegue en Azure Container Apps
 
 --------------------------------------------------------------------------------
-4. POR QUÉ FALLA 'az ad sp create-for-rbac' (EXPLICACIÓN TÉCNICA)
+3. MATRIZ DE MICROSERVICIOS, PUERTOS Y RESPONSABILIDADES
 --------------------------------------------------------------------------------
-En suscripciones universitarias ("Azure for Students"), la cuenta de usuario pertenece
-al tenant institucional de Microsoft Entra ID (Azure AD).
-El comando:
-  az ad sp create-for-rbac --name triage-github-deploy ...
-intenta registrar una aplicación en el directorio raíz.
-Los administradores de TI de las universidades configuran la política:
-  "Users can register applications = No".
-Por tanto, Entra ID rechaza la petición con:
-  "Insufficient privileges to complete the operation."
 
-SOLUCIÓN OFICIAL Y ESTABLE:
-No intentar crear Service Principals en el directorio universitario.
-El flujo oficial consiste en:
-1. GitHub compila y sube la imagen pública a GitHub Container Registry (GHCR).
-2. El usuario ejecuta la actualización desde Azure Cloud Shell en el navegador.
-   Cloud Shell ya está autenticado con la cuenta del estudiante y tiene permisos
-   completos de Contributor sobre el grupo de recursos triage-brazilsouth sin
-   necesitar Service Principals ni permisos sobre el tenant.
+1. api-gateway (Puerto 8080):
+   - Tecnologías: Spring Boot 3.3.4, Spring Cloud Gateway 2023.0.3, Netty reactivo.
+   - Es el ÚNICO punto de entrada público expuesto al exterior en Azure e Internet.
+   - Centraliza CORS para el frontend de Vercel y localhost.
+   - Enrutamiento:
+     * /api/v1/auth/** y /api/v1/admin/users/** -> ms-pacientes-auth (:8081)
+     * /api/v1/triage/patients (POST)          -> ms-pacientes-auth (:8081)
+     * /api/v1/triage/patients (GET)           -> ms-cola-espera (:8083)
+     * /api/v1/triage/evaluations/**           -> ms-evaluacion-triaje (:8082)
+     * /api/v1/triage/analyze                  -> ms-evaluacion-triaje (:8082)
+     * /api/v1/triage/patients/*/history       -> ms-evaluacion-triaje (:8082)
+     * /api/v1/triage/care/**                  -> ms-cola-espera (:8083)
+     * /api/v1/triage/events (SSE streaming)   -> ms-cola-espera (:8083)
+     * /api/v1/triage/stats, board, health     -> ms-cola-espera (:8083)
+     * /api/v1/ia/**                           -> ms-ia-recomendacion (:8084)
+     * /api/v1/catalog/**                      -> ms-ia-recomendacion (:8084)
+     * /api/v1/admin/symptoms/**               -> ms-ia-recomendacion (:8084)
+
+2. ms-pacientes-auth (Puerto 8081):
+   - Responsabilidad: Ficha demográfica del paciente, autenticación JWT/BCrypt y
+     gestión de usuarios (ADMIN, MEDICO, ENFERMERO).
+   - Base de Datos: Dueño de las tablas `pacientes` y `app_users`.
+   - gRPC: Expone servicio `PatientLookup` sobre HTTP/2 h2c en el mismo puerto 8081.
+
+3. ms-evaluacion-triaje (Puerto 8082):
+   - Responsabilidad: Motor de cálculo clínico de gravedad. Implementa NEWS2,
+     Manchester, reglas pediátricas por edad y alertas obstétricas (preeclampsia/shock).
+   - Historial de reevaluaciones de signos vitales.
+   - Base de Datos: Dueño de `signos_vitales` y `evaluaciones_triage`.
+   - gRPC: Consume `PatientLookup` de pacientes y `ClinicalAi` de IA. Expone
+     `EvaluationAccess` para la cola de espera.
+
+4. ms-cola-espera (Puerto 8083):
+   - Responsabilidad: Gestión de la sala de espera priorizada en memoria concurrente.
+   - Emisión de Server-Sent Events (SSE) en `/api/v1/triage/events` para actualización
+     en vivo del tablero de urgencias. Notificaciones WhatsApp de turno.
+   - Base de Datos: Stateless (no persiste en base de datos; delega el estado clínico
+     a ms-evaluacion-triaje mediante gRPC).
+
+5. ms-ia-recomendacion (Puerto 8084):
+   - Responsabilidad: Análisis clínico asistido con Google Gemini Flash.
+   - Ingesta de relato clínico (voz/texto), extracción de signos y sugerencias diagnósticas.
+   - Resiliencia y Fallback:
+     * Si Gemini responde HTTP 503 (sobrecargado) o 429 (límite alcanzado), conmuta
+       automáticamente al modelo de respaldo (`gemini-1.5-flash` -> `gemini-2.0-flash`).
+     * Control de cuota diario (150 llamadas) persistido en tabla `gemini_usage_audit`.
+     * Caché en memoria (TTL 30 min) para consultas repetidas.
+     * Si la IA no está disponible o se agota la cuota, activa degradación elegante
+       hacia las reglas clínicas por protocolo sin arrojar error al médico.
+   - Base de Datos: Dueño de `symptoms` y `gemini_usage_audit`.
+
+6. triage-common-contracts:
+   - DTOs compartidos (`IntakeRequest`, `RankedPatientDTO`, `BoardEntryDTO`), enums
+     clínicos (`TriageLevel`, `CareArea`, `CareStatus`) y excepciones de dominio.
+
+7. triage-grpc-contracts:
+   - Definición `triage.proto` y stubs compilados de gRPC para comunicación entre servicios.
 
 --------------------------------------------------------------------------------
-5. CONEXIÓN DEL FRONTEND EN VERCEL
+4. INFRAESTRUCTURA Y DESPLIEGUE EN MICROSOFT AZURE
 --------------------------------------------------------------------------------
-El frontend en React (Triage_frotend-) consume cuatro variables de entorno.
-Con el API Gateway desplegado, solo se debe configurar en Vercel:
 
+A. Parámetros del Entorno de Azure:
+- Resource Group: `triage-brazilsouth`
+- Región: `brazilsouth`
+- Plataforma: Azure Container Apps (ACA)
+- Entorno ACA: `triage-grpc` (Modo WorkloadProfiles / Consumption)
+- Container Apps activas:
+  1. `ms-pacientes-auth`
+  2. `ms-ia-recomendacion`
+  3. `ms-evaluacion-triaje`
+  4. `ms-cola-espera`
+  5. `api-gateway` (nuevo punto de entrada público)
+
+B. Imagen Docker en GitHub Container Registry (GHCR):
+- Repositorio de imagen: `ghcr.io/rafael5678/triage-backend:latest`
+- El Dockerfile raíz es multi-stage y compila los 5 JARs ejecutables.
+- Cada contenedor en Azure levanta su servicio específico configurando la variable:
+  `MODULE=api-gateway`
+  `MODULE=ms-pacientes-auth`
+  `MODULE=ms-ia-recomendacion`
+  `MODULE=ms-evaluacion-triaje`
+  `MODULE=ms-cola-espera`
+- Cuando se hace push a `develop` o `main`, GitHub Actions (`imagen.yml`) compila
+  y sube automáticamente la imagen a GHCR.
+
+C. Conexión con Supabase PostgreSQL:
+- Se conecta mediante **Supabase Session Pooler** (puerto 5432 o 6543) con SSL obligatorio.
+- Variable inyectada como secreto: `DATABASE_URL=secretref:dburl`
+- Evita problemas de resolución IPv6 que ocurren en Azure Container Apps al usar conexión directa.
+
+D. Explicación del Error 'az ad sp create-for-rbac' (Azure for Students):
+- En cuentas universitarias de Microsoft Entra ID (Azure AD), los estudiantes no tienen
+  permiso de administrador para registrar aplicaciones de directorio.
+- Por tanto, `az ad sp create-for-rbac` falla con: *"Insufficient privileges to complete the operation"*.
+- SOLUCIÓN ESTABLE: El despliegue y actualización se realizan directamente desde
+  **Azure Cloud Shell (Bash)** en el navegador (`portal.azure.com`). Cloud Shell hereda
+  la identidad autenticada con permisos de Contributor sobre `triage-brazilsouth` sin
+  necesitar ningún Service Principal.
+
+--------------------------------------------------------------------------------
+5. COMANDOS OFICIALES PARA AZURE CLOUD SHELL (BASH)
+--------------------------------------------------------------------------------
+
+A. Despliegue Completo Inicial o Reconfiguración:
+En Azure Cloud Shell:
+```bash
+cd ~/Triage_backend 2>/dev/null || git clone https://github.com/rafael5678/Triage_backend.git ~/Triage_backend
+cd ~/Triage_backend
+git fetch origin
+git checkout main
+git pull origin main
+
+LOCATION=brazilsouth RG=triage-brazilsouth bash deploy/azure.sh
+```
+(El script es idempotente: comprueba recursos existentes, actualiza las 4 apps de
+dominio y crea/actualiza `api-gateway` con Ingress externo en puerto 8080).
+
+B. Actualización Rápida de los 5 Contenedores (Tras nuevo push a GitHub):
+```bash
+for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera api-gateway; do
+  echo "== Actualizando $app =="
+  az containerapp update -n "$app" -g triage-brazilsouth \
+    --image ghcr.io/rafael5678/triage-backend:latest \
+    --revision-suffix "r$(date +%s)" -o none
+done
+```
+
+C. Monitoreo de Logs en Vivo:
+```bash
+# Logs del API Gateway
+az containerapp logs show -n api-gateway -g triage-brazilsouth --type console --tail 40 --format text
+
+# Logs de Pacientes / Auth
+az containerapp logs show -n ms-pacientes-auth -g triage-brazilsouth --type console --tail 40 --format text
+
+# Logs de Evaluación
+az containerapp logs show -n ms-evaluacion-triaje -g triage-brazilsouth --type console --tail 40 --format text
+```
+
+--------------------------------------------------------------------------------
+6. CONEXIÓN DEL FRONTEND EN VERCEL (CERO CAMBIOS EN REACT)
+--------------------------------------------------------------------------------
+El frontend (`Triage_frotend-`) consume las APIs mediante 4 variables de entorno.
+Una vez obtenido el FQDN público del Gateway (ej: `api-gateway.whitemushroom-c888e1de.brazilsouth.azurecontainerapps.io`),
+se configuran en Vercel (`Project Settings -> Environment Variables`):
+
+```env
 VITE_AUTH_URL=https://<FQDN_API_GATEWAY>
 VITE_EVAL_URL=https://<FQDN_API_GATEWAY>
 VITE_QUEUE_URL=https://<FQDN_API_GATEWAY>
 VITE_AI_URL=https://<FQDN_API_GATEWAY>
+```
+Y se hace clic en **Redeploy**. NO SE TOCA EL CÓDIGO EN `src/services/api.js`.
 
-(Donde <FQDN_API_GATEWAY> es la URL pública que imprime el script deploy/azure.sh,
-por ejemplo: https://api-gateway.whitemushroom-c888e1de.brazilsouth.azurecontainerapps.io)
-
-NO ES NECESARIO CAMBIAR NINGUNA LÍNEA DE CÓDIGO EN EL FRONTEND.
-Solo actualizar esas 4 variables en Vercel Settings -> Environment Variables y pulsar Redeploy.
+--------------------------------------------------------------------------------
+7. REGLAS ESTRICTAS PARA CURSOR
+--------------------------------------------------------------------------------
+1. NUNCA intentes recrear o volver a introducir una estructura monolítica.
+2. NUNCA modifiques las reglas clínicas (NEWS2, rangos de signos vitales, Manchester,
+   criterios obstétricos o pediátricos) en `ms-evaluacion-triaje`.
+3. NUNCA destruyas ni cambies el nombre del grupo de recursos `triage-brazilsouth`
+   ni el entorno `triage-grpc` en Azure.
+4. NUNCA alteres las rutas del API Gateway sin actualizar sincronizadamente
+   los controladores de los microservicios correspondientes.
+5. Para desarrollo local con Docker Compose:
+   `docker compose up --build -d` (El Gateway queda listo en `localhost:8080`).
 
 ================================================================================
-FIN DEL DOCUMENTO DE TRASPASO TÉCNICO
+FIN DE LA GUÍA MAESTRA PARA CURSOR
 ================================================================================
-
