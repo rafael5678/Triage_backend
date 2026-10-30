@@ -20,7 +20,6 @@ La arquitectura cuenta con una suite automatizada de pruebas ejecutada con **JUn
 | Módulo | Pruebas | Cobertura Crítica |
 |---|---|---|
 | `api-gateway` | 1 | Carga de contexto reactivo, inicialización de rutas y filtros. |
-| `legacy-monolith` | 13 | Pruebas de compatibilidad del motor original. |
 | `ms-pacientes-auth` | 3 | Multiplexación gRPC sobre HTTP/2 h2c y validación de usuarios. |
 | `ms-evaluacion-triaje` | 13 | **Protección de Reglas Clínicas:** `ClinicalRulesTest` (NEWS2, umbrales pediátricos, preeclampsia, eclampsia, shock), `DestinationServiceTest`, `GrpcMappingTest`. |
 | `ms-cola-espera` | 8 | Priorización estricta por score y llegada, cálculo de espera, notificaciones. |

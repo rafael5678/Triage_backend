@@ -187,3 +187,4 @@ Solo actualizar esas 4 variables en Vercel Settings -> Environment Variables y p
 ================================================================================
 FIN DEL DOCUMENTO DE TRASPASO TÉCNICO
 ================================================================================
+

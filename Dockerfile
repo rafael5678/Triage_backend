@@ -8,7 +8,6 @@ COPY ms-pacientes-auth ./ms-pacientes-auth
 COPY ms-evaluacion-triaje ./ms-evaluacion-triaje
 COPY ms-cola-espera ./ms-cola-espera
 COPY ms-ia-recomendacion ./ms-ia-recomendacion
-COPY legacy-monolith ./legacy-monolith
 RUN mvn -q -DskipTests -pl api-gateway,ms-pacientes-auth,ms-evaluacion-triaje,ms-cola-espera,ms-ia-recomendacion -am package \
     && mkdir -p /jars \
     && cp api-gateway/target/api-gateway-0.1.0.jar /jars/ \

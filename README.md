@@ -61,7 +61,6 @@ Triage_backend/
 ├── ms-ia-recomendacion/           # Microservicio 4: Recomendación con IA y Catálogo (8084)
 ├── triage-common-contracts/       # Contratos compartidos (DTOs, Enums, Excepciones)
 ├── triage-grpc-contracts/         # Contratos Protocol Buffers y stubs gRPC
-├── legacy-monolith/               # Monolito original preservado como referencia
 ├── docs/                          # Documentación técnica categorizada y ADRs
 │   ├── arquitectura/              # Diagramas globales, contextos DDD y ADRs (1 a 7)
 │   ├── api/                       # Especificación de endpoints REST
