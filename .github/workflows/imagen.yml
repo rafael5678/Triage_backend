@@ -3,7 +3,7 @@ name: Imagen del backend
 # Corre todas las pruebas (incluidas las de Postgres real con Docker) y solo si pasan publica la imagen.
 on:
   push:
-    branches: [develop]
+    branches: [develop, main]
   workflow_dispatch:
 
 permissions:

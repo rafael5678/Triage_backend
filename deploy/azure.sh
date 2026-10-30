@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Despliega los cuatro microservicios en Azure Container Apps desde Azure Cloud Shell (Bash).
+# Despliega los microservicios y el API Gateway en Azure Container Apps desde Azure Cloud Shell (Bash).
 # La imagen la construye GitHub Actions en ghcr.io; aquí solo se crean los servicios.
-# Uso: bash deploy/azure.sh   (desde la carpeta del repo)
+# Uso: LOCATION=brazilsouth RG=triage-brazilsouth bash deploy/azure.sh   (desde la carpeta del repo)
 set -euo pipefail
 
 LOCATION="${LOCATION:-westus2}"
@@ -83,7 +83,7 @@ fqdn() {
   az containerapp show -n "$1" -g "$RG" --query properties.configuration.ingress.fqdn -o tsv
 }
 
-echo "== 1/4 ms-pacientes-auth"
+echo "== 1/5 ms-pacientes-auth"
 SECRETS=("dburl=${DATABASE_URL}" "admin=${ADMIN_PASSWORD}")
 upsert ms-pacientes-auth http2 \
   MODULE=ms-pacientes-auth PORT=8080 \
@@ -91,15 +91,15 @@ upsert ms-pacientes-auth http2 \
   BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD=secretref:admin
 PACIENTES="$(fqdn ms-pacientes-auth)"
 
-echo "== 2/4 ms-ia-recomendacion"
+echo "== 2/5 ms-ia-recomendacion"
 SECRETS=("dburl=${DATABASE_URL}" "gemini=${GEMINI_API_KEY}")
 upsert ms-ia-recomendacion http2 \
   MODULE=ms-ia-recomendacion PORT=8080 \
   DATABASE_URL=secretref:dburl CORS_ORIGINS="$CORS_ORIGINS" \
-  GEMINI_API_KEY=secretref:gemini GEMINI_MODEL=gemini-3.5-flash-lite,gemini-3.1-flash-lite GEMINI_DAILY_LIMIT=150
+  GEMINI_API_KEY=secretref:gemini GEMINI_MODEL="gemini-1.5-flash,gemini-2.0-flash" GEMINI_DAILY_LIMIT=150
 IA="$(fqdn ms-ia-recomendacion)"
 
-echo "== 3/4 ms-evaluacion-triaje"
+echo "== 3/5 ms-evaluacion-triaje"
 SECRETS=("dburl=${DATABASE_URL}")
 upsert ms-evaluacion-triaje http2 \
   MODULE=ms-evaluacion-triaje PORT=8080 \
@@ -109,7 +109,7 @@ upsert ms-evaluacion-triaje http2 \
   GRPC_CLIENT_IA="static://${IA}:443"
 EVALUACION="$(fqdn ms-evaluacion-triaje)"
 
-echo "== 4/4 ms-cola-espera"
+echo "== 4/5 ms-cola-espera"
 SECRETS=()
 upsert ms-cola-espera auto \
   MODULE=ms-cola-espera PORT=8080 \
@@ -118,10 +118,28 @@ upsert ms-cola-espera auto \
   GRPC_CLIENT_EVALUACION="static://${EVALUACION}:443"
 COLA="$(fqdn ms-cola-espera)"
 
+echo "== 5/5 api-gateway"
+SECRETS=()
+upsert api-gateway auto \
+  MODULE=api-gateway PORT=8080 \
+  CORS_ORIGINS="$CORS_ORIGINS" \
+  MS_PACIENTES_URL="https://${PACIENTES}" \
+  MS_EVALUACION_URL="https://${EVALUACION}" \
+  MS_COLA_URL="https://${COLA}" \
+  MS_IA_URL="https://${IA}"
+GATEWAY="$(fqdn api-gateway)"
+
 cat <<EOF
 
-Listo. Pega esto en Vercel (Settings -> Environment Variables) y haz Redeploy:
+Listo. Puedes conectar Vercel de cualquiera de las dos formas:
 
+OPCIÓN RECOMENDADA (Unificada a través del API Gateway):
+VITE_AUTH_URL=https://${GATEWAY}
+VITE_EVAL_URL=https://${GATEWAY}
+VITE_QUEUE_URL=https://${GATEWAY}
+VITE_AI_URL=https://${GATEWAY}
+
+OPCIÓN ANTERIOR (Microservicios individuales):
 VITE_AUTH_URL=https://${PACIENTES}
 VITE_EVAL_URL=https://${EVALUACION}
 VITE_QUEUE_URL=https://${COLA}

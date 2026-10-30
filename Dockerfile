@@ -3,13 +3,15 @@ WORKDIR /src
 COPY pom.xml .
 COPY triage-common-contracts ./triage-common-contracts
 COPY triage-grpc-contracts ./triage-grpc-contracts
+COPY api-gateway ./api-gateway
 COPY ms-pacientes-auth ./ms-pacientes-auth
 COPY ms-evaluacion-triaje ./ms-evaluacion-triaje
 COPY ms-cola-espera ./ms-cola-espera
 COPY ms-ia-recomendacion ./ms-ia-recomendacion
 COPY legacy-monolith ./legacy-monolith
-RUN mvn -q -DskipTests -pl ms-pacientes-auth,ms-evaluacion-triaje,ms-cola-espera,ms-ia-recomendacion -am package \
+RUN mvn -q -DskipTests -pl api-gateway,ms-pacientes-auth,ms-evaluacion-triaje,ms-cola-espera,ms-ia-recomendacion -am package \
     && mkdir -p /jars \
+    && cp api-gateway/target/api-gateway-0.1.0.jar /jars/ \
     && cp ms-pacientes-auth/target/ms-pacientes-auth-0.1.0.jar /jars/ \
     && cp ms-evaluacion-triaje/target/ms-evaluacion-triaje-0.1.0.jar /jars/ \
     && cp ms-cola-espera/target/ms-cola-espera-0.1.0.jar /jars/ \

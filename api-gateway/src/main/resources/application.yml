@@ -1,0 +1,129 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+              - "http://localhost:3000"
+              - "https://clasificador-predictivo-e.vercel.app"
+              - "${CORS_EXTRA_ORIGIN:http://localhost:5173}"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        # -------------------------------------------------------------
+        # 1. ms-pacientes-auth (Puerto 8081)
+        # -------------------------------------------------------------
+        - id: auth-service
+          uri: ${MS_PACIENTES_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+
+        - id: admin-users-service
+          uri: ${MS_PACIENTES_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/admin/users/**
+
+        # POST /api/v1/triage/patients -> Ingreso / Ficha del paciente
+        - id: patient-intake-post
+          uri: ${MS_PACIENTES_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/triage/patients
+            - Method=POST
+
+        # -------------------------------------------------------------
+        # 2. ms-evaluacion-triaje (Puerto 8082)
+        # -------------------------------------------------------------
+        # Historial de evaluaciones del paciente
+        - id: patient-history
+          uri: ${MS_EVALUACION_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/triage/patients/*/history
+
+        - id: evaluations-service
+          uri: ${MS_EVALUACION_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/triage/evaluations/**
+
+        - id: analyze-triage-service
+          uri: ${MS_EVALUACION_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/triage/analyze
+
+        # -------------------------------------------------------------
+        # 3. ms-cola-espera (Puerto 8083)
+        # -------------------------------------------------------------
+        # GET /api/v1/triage/patients -> Lista clasificada de la cola
+        - id: patient-queue-get
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/patients
+            - Method=GET
+
+        - id: queue-care-service
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/care/**
+
+        - id: queue-events-sse
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/events
+
+        - id: queue-stats
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/stats
+
+        - id: queue-board
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/board
+
+        - id: queue-health
+          uri: ${MS_COLA_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/triage/health
+
+        # -------------------------------------------------------------
+        # 4. ms-ia-recomendacion (Puerto 8084)
+        # -------------------------------------------------------------
+        - id: ai-service
+          uri: ${MS_IA_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/ia/**
+
+        - id: catalog-service
+          uri: ${MS_IA_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/catalog/**
+
+        - id: admin-symptoms-service
+          uri: ${MS_IA_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/admin/symptoms/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+

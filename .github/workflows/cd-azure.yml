@@ -1,0 +1,53 @@
+name: CD - Despliegue en Microsoft Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Construcción de Imágenes y Despliegue ACA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17 LTS (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Ejecutar Pruebas Automatizadas
+        run: mvn -B test
+
+      - name: Iniciar Sesión en Azure Container Registry
+        if: env.ACR_LOGIN_SERVER != ''
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Construir y Publicar Imágenes de Microservicios
+        if: env.ACR_LOGIN_SERVER != ''
+        run: |
+          SERVICES=("api-gateway" "ms-pacientes-auth" "ms-evaluacion-triaje" "ms-cola-espera" "ms-ia-recomendacion")
+          REGISTRY="${{ secrets.ACR_LOGIN_SERVER }}"
+          TAG="${{ github.sha }}"
+
+          for svc in "${SERVICES[@]}"; do
+            echo "==> Construyendo imagen para $svc..."
+            docker build -t "$REGISTRY/$svc:$TAG" -t "$REGISTRY/$svc:latest" -f "$svc/Dockerfile" .
+            docker push "$REGISTRY/$svc:$TAG"
+            docker push "$REGISTRY/$svc:latest"
+          done
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+

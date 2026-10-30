@@ -3,7 +3,7 @@ name: hospital-triaje
 services:
   db:
     image: postgres:16-alpine
-    container_name: hospital-triaje
+    container_name: hospital-triaje-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: hospital_triaje
@@ -18,11 +18,42 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    networks:
+      - triage-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: triage-api-gateway
+    restart: unless-stopped
+    depends_on:
+      pacientes:
+        condition: service_started
+      evaluacion:
+        condition: service_started
+      cola:
+        condition: service_started
+      ia:
+        condition: service_started
+    environment:
+      PORT: 8080
+      MS_PACIENTES_URL: http://pacientes:8081
+      MS_EVALUACION_URL: http://evaluacion:8082
+      MS_COLA_URL: http://cola:8083
+      MS_IA_URL: http://ia:8084
+      CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
+    ports:
+      - "8080:8080"
+    networks:
+      - triage-net
 
   pacientes:
     build:
       context: .
+      dockerfile: ms-pacientes-auth/Dockerfile
     container_name: ms-pacientes-auth
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -30,16 +61,19 @@ services:
       DB_URL: jdbc:postgresql://db:5432/hospital_triaje
       DB_USER: triage
       DB_PASSWORD: triage
-      CORS_ORIGINS: http://localhost:5173
-      MODULE: ms-pacientes-auth
+      CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
       PORT: 8081
     ports:
       - "8081:8081"
+    networks:
+      - triage-net
 
   ia:
     build:
       context: .
+      dockerfile: ms-ia-recomendacion/Dockerfile
     container_name: ms-ia-recomendacion
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -47,17 +81,20 @@ services:
       DB_URL: jdbc:postgresql://db:5432/hospital_triaje
       DB_USER: triage
       DB_PASSWORD: triage
-      CORS_ORIGINS: http://localhost:5173
-      MODULE: ms-ia-recomendacion
+      CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
       PORT: 8084
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8084:8084"
+    networks:
+      - triage-net
 
   evaluacion:
     build:
       context: .
+      dockerfile: ms-evaluacion-triaje/Dockerfile
     container_name: ms-evaluacion-triaje
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -69,28 +106,36 @@ services:
       DB_URL: jdbc:postgresql://db:5432/hospital_triaje
       DB_USER: triage
       DB_PASSWORD: triage
-      CORS_ORIGINS: http://localhost:5173
-      MODULE: ms-evaluacion-triaje
+      CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
       PORT: 8082
       GRPC_CLIENT_PACIENTES: static://pacientes:8081
       GRPC_CLIENT_IA: static://ia:8084
     ports:
       - "8082:8082"
+    networks:
+      - triage-net
 
   cola:
     build:
       context: .
+      dockerfile: ms-cola-espera/Dockerfile
     container_name: ms-cola-espera
+    restart: unless-stopped
     depends_on:
       evaluacion:
         condition: service_started
     environment:
-      MODULE: ms-cola-espera
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
       PORT: 8083
       GRPC_CLIENT_EVALUACION: static://evaluacion:8082
     ports:
       - "8083:8083"
+    networks:
+      - triage-net
 
 volumes:
   hospital_triaje_pg:
+
+networks:
+  triage-net:
+    driver: bridge

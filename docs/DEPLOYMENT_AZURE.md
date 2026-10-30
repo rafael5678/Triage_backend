@@ -1,52 +1,88 @@
-# Despliegue en Azure Container Apps
+# Despliegue en Microsoft Azure Container Apps (TriageIA)
 
-Cuatro Container Apps, una sola imagen. Cada app elige su jar con `MODULE`. La base es Supabase; la cola no tiene base.
+Cinco Container Apps, una sola imagen unificada en GitHub Container Registry (`ghcr.io/rafael5678/triage-backend:latest`). Cada app selecciona su JAR en tiempo de ejecución con la variable de entorno `MODULE`.
 
-La imagen la construye GitHub Actions (`.github/workflows/imagen.yml`) en cada push a `develop` y la publica en `ghcr.io/rafael5678/triage-backend:latest`. Azure solo la descarga: así no hace falta Azure Container Registry ni sus builds, que las suscripciones de estudiante suelen tener bloqueados.
+- **Base de datos**: Supabase PostgreSQL (Session pooler con SSL).
+- **Frontend**: Vercel (React + Vite).
+- **Grupo de recursos**: `triage-brazilsouth` (Región: `brazilsouth`).
+- **Entorno ACA**: `triage-grpc` (WorkloadProfiles / Consumption).
 
-## gRPC
+---
 
-Igual que en Cloud Run: un puerto por app. Pacientes, IA y evaluación usan ingress con `--transport http2`, y Jetty atiende REST y gRPC en h2c. Las llamadas internas van a la dirección `https://...azurecontainerapps.io` del otro servicio en el puerto 443 con TLS (`GRPC_NEGOTIATION=tls`).
+## 1. Aplicaciones del Backend
 
-## Pasos
+| Aplicación | Ingress | Transporte | Puerto | Módulo JAR | Variables Principales |
+|---|---|---|---|---|---|
+| `api-gateway` | Externo | auto | 8080 | `api-gateway` | `PORT=8080`, `CORS_ORIGINS`, `MS_PACIENTES_URL`, `MS_EVALUACION_URL`, `MS_COLA_URL`, `MS_IA_URL` |
+| `ms-pacientes-auth` | Externo/Interno | http2 | 8080 | `ms-pacientes-auth` | `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD` |
+| `ms-ia-recomendacion` | Externo/Interno | http2 | 8080 | `ms-ia-recomendacion` | `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_DAILY_LIMIT` |
+| `ms-evaluacion-triaje` | Externo/Interno | http2 | 8080 | `ms-evaluacion-triaje` | `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `GRPC_NEGOTIATION=tls`, `GRPC_CLIENT_PACIENTES`, `GRPC_CLIENT_IA` |
+| `ms-cola-espera` | Externo/Interno | auto | 8080 | `ms-cola-espera` | `PORT=8080`, `CORS_ORIGINS`, `GRPC_NEGOTIATION=tls`, `GRPC_CLIENT_EVALUACION` |
 
-1. Activar [Azure for Students](https://azure.microsoft.com/free/students) con el correo de la universidad. No pide tarjeta.
-2. Que la imagen sea pública una vez: en GitHub, Packages → `triage-backend` → Package settings → Change visibility → Public.
-3. En [portal.azure.com](https://portal.azure.com), abrir Cloud Shell en modo Bash:
+---
+
+## 2. Comandos para Desplegar desde Azure Cloud Shell (Bash)
+
+Abre [portal.azure.com](https://portal.azure.com) y activa Azure Cloud Shell en modo **Bash**:
 
 ```bash
-git clone -b develop https://github.com/rafael5678/Triage_backend.git
-cd Triage_backend
-bash deploy/azure.sh
+# 1. Clonar o actualizar el repositorio en Cloud Shell
+cd ~/Triage_backend 2>/dev/null || git clone https://github.com/rafael5678/Triage_backend.git ~/Triage_backend
+cd ~/Triage_backend
+git fetch origin
+git checkout main
+git pull origin main
+
+# 2. Despliegue completo inicial o reconfiguración
+LOCATION=brazilsouth RG=triage-brazilsouth bash deploy/azure.sh
 ```
 
-El script pide la URL del frontend, la `DATABASE_URL` de Supabase, la clave de Gemini y la del admin. Al final imprime las cuatro `VITE_` para Vercel.
+El script solicitará interactivamente:
+1. URL del frontend en Vercel (`https://clasificador-predictivo-e.vercel.app`).
+2. `DATABASE_URL` de Supabase (Session Pooler, puerto 5432 o 6543 con clave y SSL).
+3. `GEMINI_API_KEY` (Clave de Google AI Studio).
+4. Clave del administrador inicial.
 
-Si la región `westus2` no está permitida en la suscripción, se elige otra: `LOCATION=eastus bash deploy/azure.sh`.
+---
 
-El entorno se crea con workload profiles (plan Consumption), no en modo express: express no acepta ingress HTTP/2 y gRPC lo necesita.
+## 3. Comandos para Actualizar Contenedores Rápidamente
 
-Para desplegar un cambio: push a `develop`, esperar a que GitHub construya la imagen (unos 2 minutos) y actualizar los 4 servicios desde Cloud Shell. Las cuentas de estudiante no pueden crear el permiso que necesitaría GitHub para hacerlo solo (`az ad sp create-for-rbac` falla con "Insufficient privileges").
+Cuando se hace un `git push` a `main` o `develop`, GitHub Actions compila automáticamente la imagen Docker y la publica en GHCR. Para actualizar los 5 servicios en Azure:
 
 ```bash
-for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera; do
-  az containerapp update -n $app -g triage-brazilsouth --image ghcr.io/rafael5678/triage-backend:latest --revision-suffix r$(date +%s) -o none
+# Actualizar todos los servicios a la última versión construida
+for app in ms-pacientes-auth ms-ia-recomendacion ms-evaluacion-triaje ms-cola-espera api-gateway; do
+  echo "== Actualizando $app =="
+  az containerapp update -n "$app" -g triage-brazilsouth \
+    --image ghcr.io/rafael5678/triage-backend:latest \
+    --revision-suffix "r$(date +%s)" -o none
 done
 ```
 
-## Variables por app
+---
 
-| App | Transporte | Variables |
-|---|---|---|
-| `ms-pacientes-auth` | http2 | `MODULE`, `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD` |
-| `ms-ia-recomendacion` | http2 | `MODULE`, `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `GEMINI_API_KEY`, `GEMINI_MODEL` |
-| `ms-evaluacion-triaje` | http2 | `MODULE`, `PORT=8080`, `DATABASE_URL`, `CORS_ORIGINS`, `GRPC_NEGOTIATION=tls`, `GRPC_CLIENT_PACIENTES`, `GRPC_CLIENT_IA` |
-| `ms-cola-espera` | auto | `MODULE`, `PORT=8080`, `CORS_ORIGINS`, `GRPC_NEGOTIATION=tls`, `GRPC_CLIENT_EVALUACION` |
+## 4. Diagnóstico y Logs en Azure
 
-Las claves (`DATABASE_URL`, `GEMINI_API_KEY`, `BOOTSTRAP_ADMIN_PASSWORD`) quedan como secretos de cada app.
+```bash
+# Ver estado general de las Container Apps
+az containerapp list -g triage-brazilsouth -o table
 
-## Costo
+# Ver logs de consola en tiempo real
+az containerapp logs show -n ms-pacientes-auth -g triage-brazilsouth --type console --tail 40 --format text
+az containerapp logs show -n api-gateway -g triage-brazilsouth --type console --tail 40 --format text
+```
 
-Cada app escala a cero y usa 0,5 vCPU y 1 GiB. Container Apps da una cuota gratis mensual por suscripción; lo que pase de ahí sale del crédito de estudiante. El entorno se crea sin Log Analytics para no gastar en logs.
+---
 
-La primera petición después de un rato puede tardar hasta un minuto mientras despiertan los servicios.
+## 5. Configuración del Frontend en Vercel
+
+En Vercel (Project Settings -> Environment Variables), define las siguientes variables:
+
+```env
+VITE_AUTH_URL=https://<FQDN_API_GATEWAY>
+VITE_EVAL_URL=https://<FQDN_API_GATEWAY>
+VITE_QUEUE_URL=https://<FQDN_API_GATEWAY>
+VITE_AI_URL=https://<FQDN_API_GATEWAY>
+```
+
+Y ejecuta **Redeploy**. Con esta configuración, todo el tráfico pasa de forma segura por el API Gateway sin requerir ningún cambio de código en la aplicación React.
