@@ -6,6 +6,11 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      httpclient:
+        connect-timeout: 20000
+        response-timeout: 90s
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Vary, RETAIN_FIRST
       globalcors:
         cors-configurations:
           '[/**]':
@@ -84,6 +89,8 @@ spring:
           uri: ${MS_COLA_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/triage/events
+          metadata:
+            response-timeout: 0
 
         - id: queue-stats
           uri: ${MS_COLA_URL:http://localhost:8083}
