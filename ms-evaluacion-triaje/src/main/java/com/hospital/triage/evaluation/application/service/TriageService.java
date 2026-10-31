@@ -124,6 +124,20 @@ public class TriageService {
         if (!estimated.contains("systolic") && systolic >= 200) {
             score = Math.max(score, 62);
         }
+        AgeNorms norms = AgeNorms.of(age);
+        if (!estimated.contains("spo2")) {
+            if (spo2 < 90) {
+                score = Math.max(score, 62);
+            } else if (spo2 < 94) {
+                score = Math.max(score, 22);
+            }
+        }
+        if (!estimated.contains("heartRate") && norms.hrOff(heartRate)) {
+            score = Math.max(score, norms.hrFar(heartRate) ? 62 : 42);
+        }
+        if (!estimated.contains("respiratoryRate") && norms.rrOff(respiratoryRate)) {
+            score = Math.max(score, 42);
+        }
         if (pregnant) {
             if (systolic >= 160 || diastolic >= 110) {
                 score = Math.max(score, 78);

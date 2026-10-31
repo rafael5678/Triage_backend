@@ -2,6 +2,7 @@ package com.hospital.triage.auth.application.service;
 
 import com.hospital.triage.auth.domain.entity.Patient;
 import com.hospital.triage.auth.infrastructure.persistence.PatientRepository;
+import com.hospital.triage.common.ColombianMobile;
 import com.hospital.triage.common.dto.PatientIntakeDTO;
 import com.hospital.triage.common.exception.PatientNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,26 +35,16 @@ public class PatientService {
         p.setConditionId(dto.getConditionId());
         p.setReason(dto.getReason());
         p.setHistory(dto.getHistory());
-        p.setPhone(normalizePhone(dto.getPhone()));
+        p.setPhone(ColombianMobile.normalize(dto.getPhone()));
         boolean pregnant = Boolean.TRUE.equals(dto.getPregnant()) && "F".equalsIgnoreCase(dto.getSex());
         p.setPregnant(pregnant);
         p.setGestationWeeks(pregnant ? dto.getGestationWeeks() : null);
         return patients.save(p);
     }
 
-    /** Deja solo dígitos; un celular colombiano de 10 dígitos queda con el indicativo 57. */
+    /** Deja el celular en formato 57 + 10 dígitos, o null. Rechaza números inventados. */
     static String normalizePhone(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        String digits = raw.replaceAll("\\D", "");
-        if (digits.isEmpty()) {
-            return null;
-        }
-        if (digits.length() == 10 && digits.startsWith("3")) {
-            return "57" + digits;
-        }
-        return digits;
+        return ColombianMobile.normalize(raw);
     }
 
     public Patient findById(UUID id) {

@@ -214,4 +214,14 @@ class TriageServiceTest {
         assertThat(result.score()).isLessThan(BigDecimal.valueOf(42.0));
         assertThat(result.level()).isIn(TriageLevel.TRIAGE_IV_VERDE, TriageLevel.TRIAGE_V_AZUL);
     }
+
+    @Test
+    @DisplayName("TC-21: A los 20 años un oxígeno de 80 no puede salir como mínima")
+    void tc21_oxigenoBajoEnJovenSube() {
+        TriageService.RiskResult result = triageService.calculate(
+                20, 72, 80, 118, 76, BigDecimal.valueOf(36.6), 16, "cura", ""
+        );
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(result.level()).isIn(TriageLevel.TRIAGE_I_ROJO, TriageLevel.TRIAGE_II_NARANJA);
+    }
 }
