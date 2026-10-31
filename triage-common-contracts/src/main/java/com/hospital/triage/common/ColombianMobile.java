@@ -1,21 +1,12 @@
 package com.hospital.triage.common;
 
-import java.util.Set;
-
 /**
- * Celular colombiano para WhatsApp: 10 dígitos que empiezan en 3, con prefijo real,
- * no una secuencia inventada. Vacío se permite (el aviso simplemente no se manda).
+ * Celular colombiano para WhatsApp: 10 dígitos que empiezan en 3 (300, 310, 318…).
+ * Vacío se permite (el aviso simplemente no se manda).
  */
 public final class ColombianMobile {
 
-    private static final Set<String> PREFIXES = Set.of(
-            "300", "301", "302", "303", "304", "305",
-            "310", "311", "312", "313", "314", "315", "316", "317", "318", "319",
-            "320", "321", "322", "323", "324", "333",
-            "350", "351", "352", "353"
-    );
-
-    public static final String HINT = "Use un celular colombiano de 10 dígitos que empiece por 3 (ejemplo 300 123 4567). No se aceptan números inventados.";
+    public static final String HINT = "Use un celular colombiano de 10 dígitos que empiece por 3 (ejemplo 318 668 0042).";
 
     private ColombianMobile() {
     }
@@ -26,8 +17,11 @@ public final class ColombianMobile {
             return null;
         }
         String digits = raw.replaceAll("\\D", "");
-        if (digits.startsWith("57") && digits.length() == 12) {
+        if (digits.startsWith("57") && digits.length() >= 12) {
             digits = digits.substring(2);
+        }
+        if (digits.length() > 10) {
+            digits = digits.substring(0, 10);
         }
         if (!validLocal(digits)) {
             throw new IllegalArgumentException(HINT);
@@ -36,19 +30,12 @@ public final class ColombianMobile {
     }
 
     public static boolean validLocal(String tenDigits) {
-        if (tenDigits == null || tenDigits.length() != 10 || !tenDigits.startsWith("3")) {
+        if (tenDigits == null || tenDigits.length() != 10) {
             return false;
         }
-        if (!PREFIXES.contains(tenDigits.substring(0, 3))) {
+        if (!tenDigits.matches("3[0-5]\\d{8}")) {
             return false;
         }
-        if (tenDigits.chars().distinct().count() <= 2) {
-            return false;
-        }
-        if (tenDigits.matches("3\\d0{8}")) {
-            return false;
-        }
-        String rest = tenDigits.substring(3);
-        return rest.chars().distinct().count() > 1;
+        return tenDigits.chars().distinct().count() > 1;
     }
 }
