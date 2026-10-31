@@ -208,7 +208,8 @@ public class TriageService {
             throw new InvalidVitalSignsException("Temperature is required");
         }
         if (pas < pad) {
-            throw new InvalidVitalSignsException("Systolic cannot be lower than diastolic");
+            throw new InvalidVitalSignsException(
+                    "La presión de arriba no puede ser menor que la de abajo. Ejemplo correcto: 120/80.");
         }
         if (fc < 20 || fr < 4) {
             throw new InvalidVitalSignsException("Unrealistic vital signs");

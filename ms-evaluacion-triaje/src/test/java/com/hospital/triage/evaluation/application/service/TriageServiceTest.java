@@ -170,7 +170,7 @@ class TriageServiceTest {
                 45, 80, 98, 70, 110, BigDecimal.valueOf(36.5), 16, "cefalea", ""
         ))
                 .isInstanceOf(InvalidVitalSignsException.class)
-                .hasMessageContaining("Systolic cannot be lower than diastolic");
+                .hasMessageContaining("presión de arriba");
     }
 
     @Test
