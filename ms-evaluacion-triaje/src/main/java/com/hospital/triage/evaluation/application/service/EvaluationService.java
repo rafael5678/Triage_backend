@@ -144,7 +144,16 @@ public class EvaluationService {
                          ExtraFindings extra, Double localModelScore, boolean pregnant, Integer gestationWeeks) {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
-                pregnant, gestationWeeks);
+                pregnant, gestationWeeks, extra.getEstimatedFields());
+        // Si el protocolo ya es crítico por los signos, no gastamos Gemini: no puede bajar el puntaje
+        // y evita recomendaciones de reanimación cuando alguien escribió mal el pulso o la presión.
+        if (protocol.score().doubleValue() >= 86) {
+            AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();
+            var result = triageService.merge(protocol, ia, extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty());
+            var destination = destinations.decide(result.level(), conditionId, age, null,
+                    pregnant, gestationWeeks, systolic, diastolic);
+            return new Scored(result, ia, destination);
+        }
         AiAssistDTO ia = clinicalAi.assist(AssistInput.builder()
                 .conditionId(conditionId)
                 .reason(reason)
@@ -172,7 +181,8 @@ public class EvaluationService {
         if (ia.getProtocolScore() == null) {
             ia.setProtocolScore(protocol.score().doubleValue());
         }
-        var result = triageService.merge(protocol, ia);
+        boolean vitalsEstimated = extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty();
+        var result = triageService.merge(protocol, ia, vitalsEstimated);
         var destination = destinations.decide(result.level(), conditionId, age, ia.getSuggestedArea(),
                 pregnant, gestationWeeks, systolic, diastolic);
         return new Scored(result, ia, destination);
