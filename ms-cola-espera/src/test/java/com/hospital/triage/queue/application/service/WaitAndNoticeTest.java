@@ -23,6 +23,8 @@ class WaitAndNoticeTest {
         return RankedPatientDTO.builder()
                 .patientId(UUID.randomUUID())
                 .name(name)
+                .document("1087782478")
+                .age(40)
                 .riskScore(BigDecimal.valueOf(score))
                 .triageLevel(TriageLevel.TRIAGE_III_AMARILLO)
                 .status(CareStatus.EN_ESPERA)
@@ -93,11 +95,31 @@ class WaitAndNoticeTest {
 
         assertThat(WhatsAppNotifier.message(inRoom))
                 .startsWith("Hola Ana,")
+                .contains("turno es AM-478")
                 .contains("puesto 2")
-                .contains("permanezca en la sala");
+                .contains("Permanezca en la sala");
         assertThat(WhatsAppNotifier.message(away))
                 .startsWith("Hola Luis,")
+                .contains("turno es LP-478")
                 .contains("aún no registramos su llegada")
                 .contains("8 minutos");
+    }
+
+    @Test
+    @DisplayName("WN-05: Con el mismo nivel, 65+ pasa antes que un joven; si el joven está más grave, él va primero")
+    void wn05_adultoMayorNoSaltaAQuienEstaMasGrave() {
+        RankedPatientDTO elderSame = waiting("Marta López", 42, 5, 30);
+        elderSame.setAge(72);
+        RankedPatientDTO youngSame = waiting("Pedro Díaz", 48, 20, 30);
+        youngSame.setAge(22);
+        RankedPatientDTO youngCritical = waiting("Laura Ruiz", 90, 1, 10);
+        youngCritical.setAge(19);
+        youngCritical.setTriageLevel(TriageLevel.TRIAGE_I_ROJO);
+
+        List<RankedPatientDTO> rows = new ArrayList<>(List.of(youngSame, elderSame, youngCritical));
+        rows.sort(QueueService.PRIORITY);
+
+        assertThat(rows).extracting(RankedPatientDTO::getName)
+                .containsExactly("Laura Ruiz", "Marta López", "Pedro Díaz");
     }
 }

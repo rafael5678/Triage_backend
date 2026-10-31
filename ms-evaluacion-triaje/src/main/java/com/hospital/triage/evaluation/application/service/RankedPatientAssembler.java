@@ -1,6 +1,7 @@
 package com.hospital.triage.evaluation.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hospital.triage.common.TurnTicket;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.evaluation.application.port.PatientSnapshot;
@@ -78,7 +79,7 @@ final class RankedPatientAssembler {
                     .painScale(signs.getPainScale())
                     .consciousness(signs.getConsciousness());
         }
-        return builder.build();
+        return builder.ticket(TurnTicket.of(patient.name(), patient.document())).build();
     }
 
     static String joinFields(List<String> fields) {

@@ -1,5 +1,6 @@
 package com.hospital.triage.queue.application.service;
 
+import com.hospital.triage.common.TurnTicket;
 import com.hospital.triage.common.dto.BoardEntryDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.dto.TriageStatsDTO;
@@ -139,25 +140,13 @@ public class InsightService {
                 .maxWaitMinutes(p.getMaxWaitMinutes())
                 .waitedMinutes(waited)
                 .estimatedWaitMinutes(estimated)
+                .arrivedAt(p.getArrivedAt() != null ? p.getArrivedAt() : p.getEvaluatedAt())
                 .build();
     }
 
     /** Turno que no identifica a la persona: iniciales y los últimos 3 caracteres del documento. */
     static String ticket(String name, String document) {
-        StringBuilder initials = new StringBuilder();
-        if (name != null) {
-            for (String part : name.trim().split("\\s+")) {
-                if (!part.isBlank() && initials.length() < 2) {
-                    initials.append(Character.toUpperCase(part.charAt(0)));
-                }
-            }
-        }
-        if (initials.isEmpty()) {
-            initials.append("P");
-        }
-        String doc = document == null ? "" : document.replaceAll("\\s", "");
-        String tail = doc.length() >= 3 ? doc.substring(doc.length() - 3) : doc;
-        return tail.isEmpty() ? initials.toString() : initials + "-" + tail;
+        return TurnTicket.of(name, document);
     }
 
     private static Map<String, Integer> arrivalsByHour(List<RankedPatientDTO> all, OffsetDateTime now) {

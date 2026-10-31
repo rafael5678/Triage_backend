@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.OffsetDateTime;
+
 /** Fila de la pantalla pública de sala: sin nombre ni documento completo. */
 @Data
 @Builder
@@ -24,4 +26,5 @@ public class BoardEntryDTO {
     private Integer estimatedWaitMinutes;
     private Boolean overdue;
     private Boolean present;
+    private OffsetDateTime arrivedAt;
 }

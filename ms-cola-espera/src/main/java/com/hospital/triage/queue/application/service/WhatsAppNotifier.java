@@ -2,6 +2,7 @@ package com.hospital.triage.queue.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.hospital.triage.common.TurnTicket;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.enums.CareStatus;
 import com.hospital.triage.queue.application.port.EvaluationPort;
@@ -120,15 +121,19 @@ public class WhatsAppNotifier {
     /** Texto del aviso; el frontend arma el mismo para el botón manual. */
     static String message(RankedPatientDTO p) {
         String name = firstName(p.getName());
+        String ticket = TurnTicket.of(p.getName(), p.getDocument());
         String area = p.getDestinationArea() == null ? "Urgencias" : p.getDestinationArea();
+        String place = p.getQueuePosition() == null ? "—" : String.valueOf(p.getQueuePosition());
         int left = Math.max(0, p.getMinutesLeft() == null ? 10 : p.getMinutesLeft());
+        int maxWait = p.getMaxWaitMinutes() == null ? 30 : p.getMaxWaitMinutes();
         if (Boolean.FALSE.equals(p.getPresent())) {
-            return "Hola " + name + ", le escribimos de Urgencias. Su turno en " + area
-                    + " está por vencerse y aún no registramos su llegada. Por favor preséntese en los próximos "
-                    + Math.max(5, left) + " minutos para conservar su prioridad.";
+            return "Hola " + name + ", su turno es " + ticket + " en " + area
+                    + " (puesto " + place + "). Aún no registramos su llegada. Preséntese en los próximos "
+                    + Math.max(5, left) + " minutos y mire la pantalla: cuando salga " + ticket + " pase a " + area + ".";
         }
-        return "Hola " + name + ", le escribimos de Urgencias. Su turno en " + area
-                + " está cerca (puesto " + p.getQueuePosition() + "). Por favor permanezca en la sala de espera.";
+        return "Hola " + name + ", su turno es " + ticket + " en " + area
+                + " (puesto " + place + ", meta " + maxWait + " min). Permanezca en la sala de espera y mire la pantalla: cuando salga "
+                + ticket + " pase a " + area + ".";
     }
 
     private boolean send(RankedPatientDTO p) throws Exception {

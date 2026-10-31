@@ -43,6 +43,8 @@ public class RankedPatientDTO {
     private CareStatus status;
     @JsonAlias("posicionCola")
     private Integer queuePosition;
+    /** Iniciales y últimos 3 del documento: el mismo código de la pantalla de sala. */
+    private String ticket;
     private Integer news2;
     @JsonAlias("evaluadoEn")
     private OffsetDateTime evaluatedAt;

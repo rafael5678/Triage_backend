@@ -1,5 +1,6 @@
 package com.hospital.triage.queue.application.service;
 
+import com.hospital.triage.common.TurnTicket;
 import com.hospital.triage.common.dto.QueueStateDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.enums.CareStatus;
@@ -17,9 +18,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QueueService {
 
-    /** Primero el puntaje más alto; si empatan, quien llegó antes. */
+    /**
+     * Primero el más grave (nivel de triaje, luego puntaje).
+     * Si el nivel es el mismo, pasa quien tiene 65 años o más.
+     * Si aún empatan, quien llegó antes.
+     */
     static final Comparator<RankedPatientDTO> PRIORITY = Comparator
-            .comparing(RankedPatientDTO::getRiskScore, Comparator.nullsLast(Comparator.reverseOrder()))
+            .comparing((RankedPatientDTO p) -> p.getTriageLevel() == null ? Integer.MAX_VALUE : p.getTriageLevel().ordinal())
+            .thenComparing(p -> TurnTicket.elderly(p.getAge()), Comparator.reverseOrder())
+            .thenComparing(RankedPatientDTO::getRiskScore, Comparator.nullsLast(Comparator.reverseOrder()))
             .thenComparing(p -> p.getArrivedAt() != null ? p.getArrivedAt() : p.getEvaluatedAt(),
                     Comparator.nullsLast(Comparator.naturalOrder()));
 
@@ -38,6 +45,7 @@ public class QueueService {
         OffsetDateTime now = OffsetDateTime.now();
         List<RankedPatientDTO> rows = evaluations.listAll();
         rows.forEach(p -> {
+            p.setTicket(TurnTicket.of(p.getName(), p.getDocument()));
             if (p.getStatus() == CareStatus.EN_ESPERA) {
                 WaitClock.stamp(p, now);
             }
@@ -77,6 +85,7 @@ public class QueueService {
         int position = 1;
         for (RankedPatientDTO patient : latest) {
             patient.setQueuePosition(position++);
+            patient.setTicket(TurnTicket.of(patient.getName(), patient.getDocument()));
             WaitClock.stamp(patient, now);
         }
         return latest;
