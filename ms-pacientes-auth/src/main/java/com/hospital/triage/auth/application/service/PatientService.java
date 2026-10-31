@@ -2,6 +2,7 @@ package com.hospital.triage.auth.application.service;
 
 import com.hospital.triage.auth.domain.entity.Patient;
 import com.hospital.triage.auth.infrastructure.persistence.PatientRepository;
+import com.hospital.triage.common.ColombianId;
 import com.hospital.triage.common.ColombianMobile;
 import com.hospital.triage.common.dto.PatientIntakeDTO;
 import com.hospital.triage.common.exception.PatientNotFoundException;
@@ -23,9 +24,10 @@ public class PatientService {
     /** Si el documento ya existe se actualiza la ficha: es la misma persona que vuelve a consultar. */
     @Transactional
     public Patient register(PatientIntakeDTO dto) {
-        Patient p = patients.findByDocument(dto.getDocument().trim()).orElseGet(() -> {
+        String document = ColombianId.normalize(dto.getDocument());
+        Patient p = patients.findByDocument(document).orElseGet(() -> {
             Patient created = new Patient();
-            created.setDocument(dto.getDocument().trim());
+            created.setDocument(document);
             created.setCreatedAt(OffsetDateTime.now());
             return created;
         });

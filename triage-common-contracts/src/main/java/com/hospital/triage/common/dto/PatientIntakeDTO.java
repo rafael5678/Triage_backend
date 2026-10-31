@@ -22,7 +22,8 @@ public class PatientIntakeDTO {
     private String name;
 
     @NotBlank
-    @Size(max = 40)
+    @Size(min = 5, max = 10)
+    @jakarta.validation.constraints.Pattern(regexp = "^[0-9]{5,10}$", message = "La cédula o TI va de 5 a 10 dígitos")
     @JsonAlias("documento")
     private String document;
 
