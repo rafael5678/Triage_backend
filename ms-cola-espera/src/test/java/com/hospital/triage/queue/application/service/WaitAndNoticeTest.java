@@ -101,7 +101,7 @@ class WaitAndNoticeTest {
         assertThat(WhatsAppNotifier.message(away))
                 .startsWith("Hola Luis,")
                 .contains("turno es LP-478")
-                .contains("aún no registramos su llegada")
+                .contains("Aún no registramos su llegada")
                 .contains("8 minutos");
     }
 
