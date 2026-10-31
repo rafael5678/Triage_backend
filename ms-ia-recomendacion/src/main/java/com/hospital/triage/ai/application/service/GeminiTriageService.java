@@ -102,7 +102,7 @@ public class GeminiTriageService {
                 Signos estimados: %s
                 NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
-                c.protocolScore() == null ? "desconocido" : String.valueOf(c.protocolScore()),
+                String.valueOf(c.protocolScore()),
                 hasPhoto ? "qué se ve en la foto, breve" : "",
                 HospitalDatasetPack.build(catalog),
                 c.conditionId() == null ? "" : c.conditionId(),
