@@ -126,9 +126,11 @@ public class TriageService {
         }
         AgeNorms norms = AgeNorms.of(age);
         if (!estimated.contains("spo2")) {
-            if (spo2 < 90) {
+            if (spo2 <= 89) {
                 score = Math.max(score, 62);
-            } else if (spo2 < 94) {
+            } else if (spo2 <= 91) {
+                score = Math.max(score, 42);
+            } else if (spo2 < 95) {
                 score = Math.max(score, 22);
             }
         }

@@ -9,9 +9,11 @@ record AgeNorms(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin, int sbpM
         if (age < 6) return new AgeNorms(80, 140, 22, 34, 80, 115);
         if (age < 12) return new AgeNorms(70, 120, 18, 30, 85, 120);
         if (age < 16) return new AgeNorms(60, 110, 12, 24, 90, 125);
-        if (age >= 65) return new AgeNorms(60, 90, 12, 20, 100, 150);
-        if (age >= 40) return new AgeNorms(60, 100, 12, 20, 90, 140);
-        return new AgeNorms(60, 100, 12, 20, 90, 130);
+        if (age < 30) return new AgeNorms(60, 100, 12, 20, 90, 120);
+        if (age < 45) return new AgeNorms(60, 100, 12, 20, 95, 130);
+        if (age < 60) return new AgeNorms(60, 95, 12, 20, 100, 135);
+        if (age < 70) return new AgeNorms(60, 90, 12, 22, 100, 145);
+        return new AgeNorms(55, 90, 12, 22, 100, 150);
     }
 
     boolean hrOff(int hr) {
