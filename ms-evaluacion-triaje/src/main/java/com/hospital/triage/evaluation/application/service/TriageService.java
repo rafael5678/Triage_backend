@@ -124,6 +124,13 @@ public class TriageService {
         if (!estimated.contains("systolic") && systolic >= 200) {
             score = Math.max(score, 62);
         }
+        // Se acepta lo que midieron. Si está fuera de lo normal, sube el riesgo; no se rechaza ni se “mejora”.
+        if (!estimated.contains("systolic") && !estimated.contains("diastolic") && systolic < diastolic) {
+            score = Math.max(score, 62);
+        }
+        if (!estimated.contains("systolic") && systolic > 0 && systolic < 90) {
+            score = Math.max(score, 42);
+        }
         AgeNorms norms = AgeNorms.of(age);
         if (!estimated.contains("spo2")) {
             if (spo2 <= 89) {
@@ -206,10 +213,6 @@ public class TriageService {
         }
         if (temp == null) {
             throw new InvalidVitalSignsException("Temperature is required");
-        }
-        if (pas < pad) {
-            throw new InvalidVitalSignsException(
-                    "La presión de arriba no puede ser menor que la de abajo. Ejemplo correcto: 120/80.");
         }
         if (fc < 20 || fr < 4) {
             throw new InvalidVitalSignsException("Unrealistic vital signs");

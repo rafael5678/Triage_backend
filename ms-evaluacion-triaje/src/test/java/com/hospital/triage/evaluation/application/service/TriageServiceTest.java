@@ -164,13 +164,12 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-09: Validación fisiológica: Presión arterial incoherente (PAS < PAD)")
-    void tc09_validacionPresionIncoherente() {
-        assertThatThrownBy(() -> triageService.calculate(
-                45, 80, 98, 70, 110, BigDecimal.valueOf(36.5), 16, "cefalea", ""
-        ))
-                .isInstanceOf(InvalidVitalSignsException.class)
-                .hasMessageContaining("presión de arriba");
+    @DisplayName("TC-09: Si midieron 70/110 se acepta y el puntaje sube, no se rechaza")
+    void tc09_presionAlRevesSeAceptaYSube() {
+        TriageService.RiskResult result = triageService.calculate(
+                25, 50, 98, 84, 98, BigDecimal.valueOf(36.5), 16, "cura", ""
+        );
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
     }
 
     @Test
