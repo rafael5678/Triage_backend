@@ -225,6 +225,17 @@ class TriageServiceTest {
     }
 
     @Test
+    @DisplayName("TC-23: Oxígeno 63 y pulso 38 miden crítica aunque falten PAD o respiración estimados")
+    void tc23_estimadoNoTapaCriticoMedido() {
+        TriageService.RiskResult result = triageService.calculate(
+                17, 38, 63, 82, 74, BigDecimal.valueOf(34.3), 16, "hemorragia", "",
+                null, null, null, false, null, java.util.List.of("diastolic", "respiratoryRate")
+        );
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
+        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
+    }
+
+    @Test
     @DisplayName("TC-22: Oxígeno 91 ya no es normal; 89 es al menos alta")
     void tc22_oxigenoUmbrales() {
         var low = triageService.calculate(20, 72, 91, 116, 74, BigDecimal.valueOf(36.6), 16, "cura", "");

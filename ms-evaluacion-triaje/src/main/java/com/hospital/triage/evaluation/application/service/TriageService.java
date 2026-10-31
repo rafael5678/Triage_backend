@@ -101,17 +101,31 @@ public class TriageService {
         if (painScale != null && painScale >= 8) {
             score += 4;
         }
-        boolean extremeVitals = band == null
-                ? (spo2 < 85 && !estimated.contains("spo2"))
-                    || (systolic < 80 && !estimated.contains("systolic"))
-                    || (respiratoryRate < 8 && !estimated.contains("respiratoryRate"))
-                    || (heartRate > 150 && !estimated.contains("heartRate"))
-                    || (heartRate < 40 && !estimated.contains("heartRate"))
-                : (spo2 < 85 && !estimated.contains("spo2")) || band.extreme(heartRate, respiratoryRate, systolic);
-        if (extremeVitals && estimated.isEmpty()) {
+        // Un signo medido extremo sube a crítica aunque la IA haya estimado OTRO dato (PAD, FR…).
+        int redHits = 0;
+        if (!estimated.contains("spo2") && spo2 < 85) {
+            redHits++;
+        }
+        if (!estimated.contains("systolic") && systolic < 80) {
+            redHits++;
+        }
+        if (!estimated.contains("respiratoryRate") && respiratoryRate < 8) {
+            redHits++;
+        }
+        if (!estimated.contains("heartRate") && (heartRate > 150 || heartRate < 40)) {
+            redHits++;
+        }
+        if (band != null && band.extreme(heartRate, respiratoryRate, systolic)) {
+            redHits = Math.max(redHits, 1);
+        }
+        if (redHits >= 1) {
             score = Math.max(score, 86);
-        } else if (extremeVitals) {
-            score = Math.max(score, 62);
+        }
+        if (redHits >= 2) {
+            score = Math.max(score, 92);
+        }
+        if (redHits >= 3) {
+            score = Math.max(score, 97);
         }
         // Una herida chica no puede dejar el caso en "mínima" si el pulso o la presión ya están mal.
         if (!estimated.contains("heartRate") && heartRate > 0 && heartRate < 50) {
