@@ -38,11 +38,12 @@ public class EvaluationService {
 
     public RankedPatientDTO evaluate(VitalSignsDTO dto) {
         PatientSnapshot patient = patients.require(dto.getPatientId());
+        // Confirmar en cola no vuelve a llamar a Gemini: el análisis ya se vio en pantalla.
         Scored scored = score(patient.conditionId(), patient.reason(), patient.history(),
                 patient.age() == null ? 0 : patient.age(), patient.sex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
                 dto.getTemperature(), dto.getRespiratoryRate(), dto, null,
-                patient.pregnant(), patient.gestationWeeks());
+                patient.pregnant(), patient.gestationWeeks(), false);
         return store.save(patient, dto, scored.result(), scored.ia(), scored.destination());
     }
 
@@ -71,7 +72,7 @@ public class EvaluationService {
         Integer weeks = pregnant ? dto.getGestationWeeks() : null;
         Scored scored = score(dto.getConditionId(), dto.getReason(), dto.getHistory(), age, dto.getSex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
-                dto.getTemperature(), dto.getRespiratoryRate(), dto, dto.getLocalModelScore(), pregnant, weeks);
+                dto.getTemperature(), dto.getRespiratoryRate(), dto, dto.getLocalModelScore(), pregnant, weeks, true);
 
         PatientSnapshot preview = new PatientSnapshot(
                 null, dto.getName(), dto.getDocument(), dto.getAge(), dto.getSex(),
@@ -141,13 +142,13 @@ public class EvaluationService {
 
     private Scored score(String conditionId, String reason, String history, int age, String sex,
                          int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature, int respiratoryRate,
-                         ExtraFindings extra, Double localModelScore, boolean pregnant, Integer gestationWeeks) {
+                         ExtraFindings extra, Double localModelScore, boolean pregnant, Integer gestationWeeks,
+                         boolean consultAi) {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
                 pregnant, gestationWeeks, extra.getEstimatedFields());
-        // Si el protocolo ya es crítico por los signos, no gastamos Gemini: no puede bajar el puntaje
-        // y evita recomendaciones de reanimación cuando alguien escribió mal el pulso o la presión.
-        if (protocol.score().doubleValue() >= 86) {
+        // Guardar en cola no consulta Gemini. Tampoco si el protocolo ya es crítico.
+        if (!consultAi || protocol.score().doubleValue() >= 86) {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();
             var result = triageService.merge(protocol, ia, extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty());
             var destination = destinations.decide(result.level(), conditionId, age, null,
