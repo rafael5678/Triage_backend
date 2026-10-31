@@ -63,12 +63,13 @@ class IntakeServiceTest {
         IntakeSuggestion s = service.normalize(answer, List.of(symptom("sca")), request(), Map.of("systolic", 95), false);
 
         assertThat(s.getConditionId()).isEqualTo("sca");
-        assertThat(s.getHeartRate()).isEqualTo(250);
-        assertThat(s.getSpo2()).isEqualTo(50);
-        assertThat(s.getTemperature()).isEqualByComparingTo(BigDecimal.valueOf(43.0));
+        assertThat(s.getHeartRate()).isNull();
+        assertThat(s.getSpo2()).isNull();
+        assertThat(s.getSystolic()).isEqualTo(95);
+        assertThat(s.getTemperature()).isNull();
         assertThat(s.getPainScale()).isEqualTo(10);
         assertThat(s.getConsciousness()).isEqualTo("A");
-        assertThat(s.getEstimatedFields()).containsExactlyInAnyOrder("heartRate", "spo2");
+        assertThat(s.getEstimatedFields()).isEmpty();
         assertThat(s.getPhotoFindings()).isNull();
     }
 
@@ -81,7 +82,8 @@ class IntakeServiceTest {
 
         IntakeSuggestion s = service.normalize(answer, List.of(), request(), Map.of(), true);
 
-        assertThat(s.getEstimatedFields()).containsExactly("heartRate");
+        assertThat(s.getEstimatedFields()).isEmpty();
+        assertThat(s.getHeartRate()).isNull();
         assertThat(s.getPhotoFindings()).isEqualTo("Herida de 3 cm");
     }
 }

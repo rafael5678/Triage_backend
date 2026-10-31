@@ -34,7 +34,7 @@ import java.util.Optional;
 @Component
 public class GeminiClient {
 
-    private static final int MAX_MODELS_PER_CALL = 2;
+    private static final int MAX_MODELS_PER_CALL = 1;
     private static final Duration CACHE_TTL = Duration.ofMinutes(30);
     private static final int CACHE_SIZE = 200;
     private static final ZoneId ZONE = ZoneId.of("America/Bogota");

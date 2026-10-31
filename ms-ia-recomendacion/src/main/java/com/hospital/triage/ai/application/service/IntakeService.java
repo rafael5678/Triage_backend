@@ -36,7 +36,7 @@ public class IntakeService {
         List<Symptom> catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Map<String, Object> known = request.getKnown() == null ? Map.of() : request.getKnown();
         boolean hasPhoto = GeminiClient.cleanBase64(request.getPhotoBase64()) != null;
-        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), 1536);
+        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), 512);
         if (answer.isEmpty()) {
             return IntakeSuggestion.builder().active(false).build();
         }
@@ -86,11 +86,14 @@ public class IntakeService {
                 .notes(GeminiClient.texts(a.path("notes"), 5));
 
         IntakeSuggestion s = b.build();
-        for (String field : VITALS) {
-            if (vital(s, field) == null) {
-                estimated.remove(field);
-            }
-        }
+        // Si Gemini inventó un signo (lo marcó estimado y nadie lo escribió), se descarta.
+        s.setHeartRate(keepVital(s.getHeartRate(), "heartRate", known, estimated));
+        s.setSpo2(keepVital(s.getSpo2(), "spo2", known, estimated));
+        s.setSystolic(keepVital(s.getSystolic(), "systolic", known, estimated));
+        s.setDiastolic(keepVital(s.getDiastolic(), "diastolic", known, estimated));
+        s.setTemperature(keepVital(s.getTemperature(), "temperature", known, estimated));
+        s.setRespiratoryRate(keepVital(s.getRespiratoryRate(), "respiratoryRate", known, estimated));
+        estimated.removeIf(field -> vital(s, field) == null);
         s.setEstimatedFields(new ArrayList<>(estimated));
         return s;
     }
@@ -115,19 +118,21 @@ public class IntakeService {
                 - %s
                 - comorbidityIds: SOLO ids de esta lista, si el relato los menciona:
                 - %s
-                - reason: resumen clínico corto en español sencillo (máx 300 caracteres).
-                - Si un signo vital NO se menciona y no está en DATOS YA ESCRITOS, ESTÍMALO con lo que sugiere el relato
-                  (un caso grave se estima en rango grave; nunca normalices un caso grave) y ponlo en estimatedFields.
-                - Nunca cambies los DATOS YA ESCRITOS: repítelos igual.
-                - consciousness: A (alerta), C (confusión nueva), V (responde a la voz), P (solo al dolor), U (no responde).
-                - glucose en mg/dL solo si se menciona; painScale 0-10 si se puede deducir.
-                - notes: avisos útiles para quien hace el triage (máx 5), por ejemplo qué medir primero.
+                - reason: resumen corto en español sencillo (máx 200 caracteres).
+                - Signos vitales (heartRate, spo2, systolic, diastolic, temperature, respiratoryRate):
+                  SOLO si el relato o DATOS YA ESCRITOS traen el número. Si no se midió, usa null.
+                  NUNCA inventes oxígeno bajo, pulso raro ni presión de shock. Un dolor de cabeza no es un paro.
+                - estimatedFields: vacío, salvo que copies un número dudoso del relato.
+                - Nunca cambies los DATOS YA ESCRITOS.
+                - consciousness: A, C, V, P o U solo si el relato lo deja claro; si no, A.
+                - glucose y painScale solo si se mencionan.
+                - notes: máximo 3 avisos prácticos (qué medir).
 
                 Responde SOLO este JSON:
-                {"conditionId":"","reason":"","comorbidityIds":[],"age":0,"sex":"M|F|O",
-                 "heartRate":0,"spo2":0,"systolic":0,"diastolic":0,"temperature":36.5,"respiratoryRate":0,
+                {"conditionId":"","reason":"","comorbidityIds":[],"age":null,"sex":null,
+                 "heartRate":null,"spo2":null,"systolic":null,"diastolic":null,"temperature":null,"respiratoryRate":null,
                  "glucose":null,"painScale":null,"consciousness":"A",
-                 "estimatedFields":["heartRate", "..."],
+                 "estimatedFields":[],
                  "photoFindings":"%s",
                  "notes":[]}
 
@@ -141,6 +146,16 @@ public class IntakeService {
                 knownText,
                 request.getStory() == null ? "" : request.getStory()
         );
+    }
+
+    private static <T> T keepVital(T value, String field, Map<String, Object> known, Set<String> estimated) {
+        if (isKnown(known, field)) {
+            return value;
+        }
+        if (estimated.contains(field)) {
+            return null;
+        }
+        return value;
     }
 
     private static boolean isKnown(Map<String, Object> known, String field) {

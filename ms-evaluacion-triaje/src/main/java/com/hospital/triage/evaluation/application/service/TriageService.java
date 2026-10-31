@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,7 +57,7 @@ public class TriageService {
                                 int respiratoryRate, String conditionId, String history,
                                 Integer glucose, Integer painScale, String consciousness) {
         return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
-                conditionId, history, glucose, painScale, consciousness, false, null);
+                conditionId, history, glucose, painScale, consciousness, false, null, List.of());
     }
 
     /**
@@ -68,7 +69,16 @@ public class TriageService {
                                 int respiratoryRate, String conditionId, String history,
                                 Integer glucose, Integer painScale, String consciousness,
                                 boolean pregnant, Integer gestationWeeks) {
+        return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                conditionId, history, glucose, painScale, consciousness, pregnant, gestationWeeks, List.of());
+    }
+
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history,
+                                Integer glucose, Integer painScale, String consciousness,
+                                boolean pregnant, Integer gestationWeeks, List<String> estimatedFields) {
         validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
+        java.util.Set<String> estimated = estimatedFields == null ? java.util.Set.of() : new java.util.HashSet<>(estimatedFields);
         String avpu = avpu(consciousness);
         PediatricBand band = PediatricBand.forAge(age);
         int vitalsScore = band == null
@@ -92,10 +102,15 @@ public class TriageService {
             score += 4;
         }
         boolean extremeVitals = band == null
-                ? spo2 < 85 || systolic < 80 || respiratoryRate < 8 || heartRate > 150
-                : spo2 < 85 || band.extreme(heartRate, respiratoryRate, systolic);
-        if (extremeVitals) {
+                ? (spo2 < 85 && !estimated.contains("spo2"))
+                    || (systolic < 80 && !estimated.contains("systolic"))
+                    || (respiratoryRate < 8 && !estimated.contains("respiratoryRate"))
+                    || (heartRate > 150 && !estimated.contains("heartRate"))
+                : (spo2 < 85 && !estimated.contains("spo2")) || band.extreme(heartRate, respiratoryRate, systolic);
+        if (extremeVitals && estimated.isEmpty()) {
             score = Math.max(score, 86);
+        } else if (extremeVitals) {
+            score = Math.max(score, 62);
         }
         if (pregnant) {
             if (systolic >= 160 || diastolic >= 110) {
@@ -131,6 +146,10 @@ public class TriageService {
     }
 
     public RiskResult merge(RiskResult protocol, AiAssistDTO ia) {
+        return merge(protocol, ia, false);
+    }
+
+    public RiskResult merge(RiskResult protocol, AiAssistDTO ia, boolean vitalsEstimated) {
         if (ia == null || !ia.isActive() || ia.getSuggestedScore() == null) {
             return protocol;
         }
@@ -139,7 +158,7 @@ public class TriageService {
         if (suggested <= base) {
             return protocol;
         }
-        double extra = Math.min(22, suggested - base);
+        double extra = Math.min(vitalsEstimated ? 6 : 22, suggested - base);
         double fused = Math.min(100, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());

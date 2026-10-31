@@ -33,7 +33,7 @@ public class GeminiTriageService {
         var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Symptom chosen = c.conditionId() == null ? null : symptoms.findById(c.conditionId()).orElse(null);
         boolean hasPhoto = GeminiClient.cleanBase64(c.photoBase64()) != null;
-        Optional<JsonNode> answer = gemini.generate(prompt(c, catalog, chosen, hasPhoto), c.photoBase64(), c.photoMime(), 2048);
+        Optional<JsonNode> answer = gemini.generate(prompt(c, catalog, chosen, hasPhoto), c.photoBase64(), c.photoMime(), 700);
         if (answer.isEmpty()) {
             return AiAssistDTO.builder().active(false).protocolScore(c.protocolScore()).build();
         }
@@ -69,27 +69,24 @@ public class GeminiTriageService {
     private String prompt(ClinicalCase c, List<Symptom> catalog, Symptom chosen, boolean hasPhoto) {
         String estimated = c.estimatedFields() == null || c.estimatedFields().isEmpty()
                 ? "ninguno (todos medidos)"
-                : String.join(", ", c.estimatedFields()) + " (ESTIMADOS por IA, no medidos: no los uses para bajar el riesgo)";
+                : String.join(", ", c.estimatedFields()) + " (NO MEDIDOS: no inventes shock ni reanimación)";
         return """
-                Eres el segundo cerebro de un triage de urgencias en Colombia. Hablas español sencillo.
-                Usa LAS DOS inteligencias a la vez:
-                1) DATASET/PROTOCOLO del hospital (NEWS2, catálogo, ejemplos). No lo ignores.
-                2) TU conocimiento clínico (ESI/Manchester, SCA, ACV, sepsis, anafilaxia, shock, hipoxia, hipoglucemia, abdomen agudo, trauma).
-                Si el relato, la foto o los signos encajan con una emergencia que el score numérico subestima, SÚBELO.
-                Nunca bajes el score si hay hipoxia, hipotensión, FR extrema, FC extrema, conciencia alterada, glucosa extrema o paro.
-                No inventes datos que no estén en el caso.
+                Eres apoyo de triage. Español sencillo. No dramatizes.
+                El score que cuentes debe acercarse al del protocolo (%s) si los signos están estimados o son de reposo.
+                Solo sube el riesgo si hay un número MEDIDO grave o un relato de emergencia real (dolor de pecho, habla rara, no responde, sangrado abundante).
+                No inventes shock, paro ni reanimación por un dolor de cabeza o un vómito.
 
-                Responde SOLO este JSON:
+                JSON:
                 {"score":0-100,
-                 "dangerLead":"frase corta de por qué es peligroso o no",
-                 "meaning":"qué implica para la cola",
-                 "fromDataset":["por qué el protocolo da ese riesgo (máx 3)"],
-                 "fromGemini":["qué aporta tu criterio clínico (máx 3)"],
-                 "immediateActions":["qué hacer YA, concreto: monitor, oxígeno, acceso venoso, ECG en 10 min... (máx 6)"],
-                 "testsToOrder":["exámenes a pedir: glucometría, troponina, hemograma, gases, Rx, TAC... (máx 6)"],
-                 "monitoring":["qué vigilar y cada cuánto (máx 5)"],
-                 "redFlags":["señales que obligan a subirlo de inmediato (máx 5)"],
-                 "symptomExplanation":"por qué estos síntomas y signos importan, en 2 a 4 frases sencillas",
+                 "dangerLead":"una frase: qué está mal o por qué no es grave",
+                 "meaning":"qué implica en la cola, 1 frase",
+                 "fromDataset":["máx 2, con los números reales"],
+                 "fromGemini":["máx 2, criterio clínico del motivo"],
+                 "immediateActions":["máx 4, concretas"],
+                 "testsToOrder":["máx 3"],
+                 "monitoring":["máx 3"],
+                 "redFlags":["máx 3: cuándo volver a triaje"],
+                 "symptomExplanation":"2 frases: por qué este motivo importa y qué dicen estos signos",
                  "suggestedArea":"REANIMACION | URGENCIAS_CRITICAS | URGENCIAS | CONSULTA_PRIORITARIA | CONSULTA_EXTERNA",
                  "photoFindings":"%s"}
 
@@ -105,7 +102,8 @@ public class GeminiTriageService {
                 Signos estimados: %s
                 NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
-                hasPhoto ? "qué se ve en la foto adjunta y qué tan grave parece (herida, quemadura, deformidad, color de piel, sangrado)" : "",
+                c.protocolScore() == null ? "desconocido" : String.valueOf(c.protocolScore()),
+                hasPhoto ? "qué se ve en la foto, breve" : "",
                 HospitalDatasetPack.build(catalog),
                 c.conditionId() == null ? "" : c.conditionId(),
                 chosen == null ? "" : chosen.getLabel(),
