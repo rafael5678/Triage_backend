@@ -194,4 +194,24 @@ class TriageServiceTest {
                 .isInstanceOf(InvalidVitalSignsException.class)
                 .hasMessageContaining("Temperature is required");
     }
+
+    @Test
+    @DisplayName("TC-19: Una herida chica no deja el caso en mínima si el pulso está bajo o la presión muy alta")
+    void tc19_heridaNoAnulaSignosGraves() {
+        TriageService.RiskResult result = triageService.calculate(
+                34, 45, 88, 185, 51, BigDecimal.valueOf(36.6), 16, "cura", ""
+        );
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+    }
+
+    @Test
+    @DisplayName("TC-20: Herida con signos de reposo sigue siendo poco urgente")
+    void tc20_heridaConReposoSigueBaja() {
+        TriageService.RiskResult result = triageService.calculate(
+                34, 72, 98, 118, 76, BigDecimal.valueOf(36.6), 16, "cura", ""
+        );
+        assertThat(result.score()).isLessThan(BigDecimal.valueOf(42.0));
+        assertThat(result.level()).isIn(TriageLevel.TRIAGE_IV_VERDE, TriageLevel.TRIAGE_V_AZUL);
+    }
 }

@@ -89,7 +89,7 @@ public class TriageService {
         int comorb = scoreHistory(history);
 
         double shockTerm = band == null
-                ? Math.min(25, (heartRate / (double) Math.max(40, systolic) - 0.5) * 40)
+                ? Math.max(0, Math.min(25, (heartRate / (double) Math.max(40, systolic) - 0.5) * 40))
                 : Math.min(25, Math.max(0, heartRate / (double) band.hrMax() - 1) * 60);
         double ageTerm = band == null ? Math.min(12, age / 10.0) * 0.35 : (age < 1 ? 3 : 0);
 
@@ -106,10 +106,22 @@ public class TriageService {
                     || (systolic < 80 && !estimated.contains("systolic"))
                     || (respiratoryRate < 8 && !estimated.contains("respiratoryRate"))
                     || (heartRate > 150 && !estimated.contains("heartRate"))
+                    || (heartRate < 40 && !estimated.contains("heartRate"))
                 : (spo2 < 85 && !estimated.contains("spo2")) || band.extreme(heartRate, respiratoryRate, systolic);
         if (extremeVitals && estimated.isEmpty()) {
             score = Math.max(score, 86);
         } else if (extremeVitals) {
+            score = Math.max(score, 62);
+        }
+        // Una herida chica no puede dejar el caso en "mínima" si el pulso o la presión ya están mal.
+        if (!estimated.contains("heartRate") && heartRate > 0 && heartRate < 50) {
+            score = Math.max(score, 62);
+        }
+        if ((!estimated.contains("systolic") && systolic >= 180)
+                || (!estimated.contains("diastolic") && diastolic >= 120)) {
+            score = Math.max(score, 42);
+        }
+        if (!estimated.contains("systolic") && systolic >= 200) {
             score = Math.max(score, 62);
         }
         if (pregnant) {
