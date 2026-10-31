@@ -123,27 +123,21 @@ class GeminiTriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-14: Modelo saturado (503) -> se usa el siguiente modelo de la lista")
+    @DisplayName("TC-14: Modelo saturado (503) -> no se prueba un segundo modelo (ahorra tokens)")
     void tc14_modeloSaturadoUsaElSiguiente() throws Exception {
         wire("test-api-key", "modelo-saturado, modelo-libre");
         when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
 
-        @SuppressWarnings("unchecked")
-        HttpResponse<String> saturado = mock(HttpResponse.class);
-        when(saturado.statusCode()).thenReturn(503);
-        when(saturado.body()).thenReturn("{\"error\":{\"code\":503}}");
-        when(mockHttpResponse.statusCode()).thenReturn(200);
-        when(mockHttpResponse.body()).thenReturn(geminiEnvelope("{\"score\": 80.0, \"dangerLead\": \"SCA\"}"));
+        when(mockHttpResponse.statusCode()).thenReturn(503);
+        when(mockHttpResponse.body()).thenReturn("{\"error\":{\"code\":503}}");
         ArgumentCaptor<HttpRequest> sent = ArgumentCaptor.forClass(HttpRequest.class);
-        doReturn(saturado, mockHttpResponse).when(mockHttpClient).send(sent.capture(), any());
+        doReturn(mockHttpResponse).when(mockHttpClient).send(sent.capture(), any());
 
         AiAssistDTO result = geminiService.assist(baseCase().build());
 
-        assertThat(result.isActive()).isTrue();
-        assertThat(result.getSuggestedScore()).isEqualTo(80.0);
-        assertThat(sent.getAllValues()).hasSize(2);
+        assertThat(result.isActive()).isFalse();
+        assertThat(sent.getAllValues()).hasSize(1);
         assertThat(sent.getAllValues().get(0).uri().toString()).contains("modelo-saturado");
-        assertThat(sent.getAllValues().get(1).uri().toString()).contains("modelo-libre");
     }
 
     @Test
@@ -206,7 +200,7 @@ class GeminiTriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-18: Aunque la lista tenga más modelos, solo se prueban dos por pregunta")
+    @DisplayName("TC-18: Aunque la lista tenga más modelos, solo se prueba uno por pregunta")
     void tc18_maximoDosModelos() throws Exception {
         wire("test-api-key", "uno,dos,tres,cuatro");
         when(symptoms.findByActiveTrueOrderBySeverityDesc()).thenReturn(List.of());
@@ -215,7 +209,7 @@ class GeminiTriageServiceTest {
         doReturn(mockHttpResponse).when(mockHttpClient).send(any(), any());
 
         assertThat(geminiService.assist(baseCase().build()).isActive()).isFalse();
-        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(2)).send(any(), any());
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(1)).send(any(), any());
     }
 
     static String geminiEnvelope(String innerJson) throws Exception {

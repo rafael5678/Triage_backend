@@ -66,7 +66,7 @@ class IntakeServiceTest {
         assertThat(s.getHeartRate()).isNull();
         assertThat(s.getSpo2()).isNull();
         assertThat(s.getSystolic()).isEqualTo(95);
-        assertThat(s.getTemperature()).isNull();
+        assertThat(s.getTemperature()).isEqualByComparingTo(BigDecimal.valueOf(43.0));
         assertThat(s.getPainScale()).isEqualTo(10);
         assertThat(s.getConsciousness()).isEqualTo("A");
         assertThat(s.getEstimatedFields()).isEmpty();
