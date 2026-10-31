@@ -147,8 +147,8 @@ public class EvaluationService {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
                 pregnant, gestationWeeks, extra.getEstimatedFields());
-        // Guardar en cola no consulta Gemini. Tampoco si el protocolo ya es crítico.
-        if (!consultAi || protocol.score().doubleValue() >= 86) {
+        // Guardar en cola no consulta Gemini: el análisis ya se vio al calcular.
+        if (!consultAi) {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();
             var result = triageService.merge(protocol, ia, extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty());
             var destination = destinations.decide(result.level(), conditionId, age, null,

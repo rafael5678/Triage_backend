@@ -72,9 +72,11 @@ public class GeminiTriageService {
                 : String.join(", ", c.estimatedFields()) + " (NO MEDIDOS: no inventes shock ni reanimación)";
         return """
                 Eres apoyo de triage. Español sencillo. No dramatizes.
-                El score que cuentes debe acercarse al del protocolo (%s) si los signos están estimados o son de reposo.
-                Solo sube el riesgo si hay un número MEDIDO grave o un relato de emergencia real (dolor de pecho, habla rara, no responde, sangrado abundante).
-                No inventes shock, paro ni reanimación por un dolor de cabeza o un vómito.
+                Mira el caso COMPLETO: edad (rangos normales cambian a los 1, 4, 16, 30, 45, 60 y 70 años), motivo, relato, antecedentes y TODOS los signos MEDIDOS juntos.
+                Un solo número raro no basta para poner crítica. Varios graves a la vez, o un motivo de emergencia con signos malos, sí pueden subir el score.
+                Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar. No inventes shock por un dato de reposo.
+                El score del protocolo (%s) es una base, no un techo: si el conjunto lo justifica, pon 78-100; si el conjunto es leve, quédate cerca de esa base.
+                No inventes reanimación por un dolor de cabeza o un vómito con signos de reposo.
 
                 JSON:
                 {"score":0-100,

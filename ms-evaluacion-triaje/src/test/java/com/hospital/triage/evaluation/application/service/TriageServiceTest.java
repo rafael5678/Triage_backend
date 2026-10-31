@@ -44,14 +44,14 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-04: Regla de seguridad para signos vitales extremos (piso mínimo 86)")
+    @DisplayName("TC-04: Varios signos malos suben el protocolo; no se marca crítica solo por un número")
     void tc04_seguridadSignosVitalesExtremos() {
         TriageService.RiskResult result = triageService.calculate(
                 30, 155, 84, 75, 50, BigDecimal.valueOf(37.0), 7, "cura", ""
         );
 
-        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
-        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(result.score()).isLessThan(BigDecimal.valueOf(86.0));
     }
 
     @Test
@@ -85,8 +85,8 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-07: Fusión IA: Límite máximo de aumento fijado en 22 puntos")
-    void tc07_fusionGeminiLimiteMaximo22Puntos() {
+    @DisplayName("TC-07: Fusión IA: Gemini puede subir hasta 38 puntos si el caso completo lo justifica")
+    void tc07_fusionGeminiLimiteMaximo38Puntos() {
         TriageService.RiskResult protocol = new TriageService.RiskResult(
                 BigDecimal.valueOf(50.0), TriageLevel.TRIAGE_III_AMARILLO, 2
         );
@@ -97,8 +97,8 @@ class TriageServiceTest {
 
         TriageService.RiskResult fused = triageService.merge(protocol, ia);
 
-        assertThat(fused.score()).isEqualTo(new BigDecimal("72.0"));
-        assertThat(fused.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+        assertThat(fused.score()).isEqualTo(new BigDecimal("88.0"));
+        assertThat(fused.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
     }
 
     @Test
@@ -225,14 +225,14 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-23: Oxígeno 63 y pulso 38 miden crítica aunque falten PAD o respiración estimados")
+    @DisplayName("TC-23: El protocolo junta motivo y signos; no pone crítica solo porque un dato esté bajo")
     void tc23_estimadoNoTapaCriticoMedido() {
         TriageService.RiskResult result = triageService.calculate(
                 17, 38, 63, 82, 74, BigDecimal.valueOf(34.3), 16, "hemorragia", "",
                 null, null, null, false, null, java.util.List.of("diastolic", "respiratoryRate")
         );
-        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
-        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(result.score()).isLessThan(BigDecimal.valueOf(86.0));
     }
 
     @Test

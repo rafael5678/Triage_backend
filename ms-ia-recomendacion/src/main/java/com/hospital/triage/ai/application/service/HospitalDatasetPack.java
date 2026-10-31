@@ -18,9 +18,9 @@ final class HospitalDatasetPack {
                 .map(s -> s.getId() + "=" + s.getLabel() + " (gravedad " + s.getSeverity() + ")")
                 .collect(Collectors.joining("\n- "));
         return """
-                PROTOCOLO: score 0-100. Motivo + NEWS2 + signos medidos. ESI: >=78 I, >=62 II, >=42 III, >=22 IV, resto V.
-                Si un signo está ESTIMADO (no medido), no lo trates como shock ni subas a reanimación.
-                Dolor de cabeza o vómito con signos de reposo = III o menos, salvo rigidez de cuello, peores cefaleas de la vida, o signos medidos graves.
+                PROTOCOLO: score 0-100. Motivo + NEWS2 + edad + todos los signos medidos juntos. ESI: >=78 I, >=62 II, >=42 III, >=22 IV, resto V.
+                No marques crítica por un solo signo. Integra edad, motivo y el resto de números.
+                Un signo ESTIMADO se ignora. Dolor de cabeza o vómito con signos de reposo = III o menos, salvo rigidez de cuello, peor cefalea de la vida, o varios signos medidos graves.
                 Catálogo:
                 - %s
                 """.formatted(symptoms);

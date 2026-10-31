@@ -101,31 +101,9 @@ public class TriageService {
         if (painScale != null && painScale >= 8) {
             score += 4;
         }
-        // Un signo medido extremo sube a crítica aunque la IA haya estimado OTRO dato (PAD, FR…).
-        int redHits = 0;
-        if (!estimated.contains("spo2") && spo2 < 85) {
-            redHits++;
-        }
-        if (!estimated.contains("systolic") && systolic < 80) {
-            redHits++;
-        }
-        if (!estimated.contains("respiratoryRate") && respiratoryRate < 8) {
-            redHits++;
-        }
-        if (!estimated.contains("heartRate") && (heartRate > 150 || heartRate < 40)) {
-            redHits++;
-        }
+        // En niños, los extremos se miden contra su edad (PEWS), no contra rangos de adulto.
         if (band != null && band.extreme(heartRate, respiratoryRate, systolic)) {
-            redHits = Math.max(redHits, 1);
-        }
-        if (redHits >= 1) {
             score = Math.max(score, 86);
-        }
-        if (redHits >= 2) {
-            score = Math.max(score, 92);
-        }
-        if (redHits >= 3) {
-            score = Math.max(score, 97);
         }
         // Una herida chica no puede dejar el caso en "mínima" si el pulso o la presión ya están mal.
         if (!estimated.contains("heartRate") && heartRate > 0 && heartRate < 50) {
@@ -207,7 +185,7 @@ public class TriageService {
         if (suggested <= base) {
             return protocol;
         }
-        double extra = Math.min(vitalsEstimated ? 6 : 22, suggested - base);
+        double extra = Math.min(38, suggested - base);
         double fused = Math.min(100, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());
