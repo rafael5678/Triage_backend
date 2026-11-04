@@ -1,5 +1,6 @@
 package com.hospital.triage.evaluation.application.service;
 
+import com.hospital.triage.common.TriageBands;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.enums.TriageLevel;
 import com.hospital.triage.common.exception.InvalidVitalSignsException;
@@ -127,89 +128,87 @@ public class TriageService {
         }
         // En niños, los extremos se miden contra su edad (PEWS), no contra rangos de adulto.
         if (band != null && band.extreme(heartRate, respiratoryRate, systolic)) {
-            score = Math.max(score, 86);
+            score = Math.max(score, TriageBands.RESUSCITATION);
         }
-        // Signos MEDIDOS de emergencia suben el piso aunque el motivo del catálogo ya esté en 78.
         if (!estimated.contains("heartRate") && heartRate > 0 && band == null) {
             if (heartRate < 40) {
-                score = Math.max(score, 86);
+                score = Math.max(score, TriageBands.RESUSCITATION);
             } else if (heartRate < 45) {
-                score = Math.max(score, 78);
+                score = Math.max(score, TriageBands.ESI_I);
             } else if (heartRate < 50) {
-                score = Math.max(score, 62);
+                score = Math.max(score, TriageBands.ESI_II);
             }
         }
         if ((!estimated.contains("systolic") && systolic >= 180)
                 || (!estimated.contains("diastolic") && diastolic >= 120)) {
-            score = Math.max(score, 42);
+            score = Math.max(score, TriageBands.ESI_III);
         }
         if (!estimated.contains("systolic") && systolic >= 200) {
-            score = Math.max(score, 62);
+            score = Math.max(score, TriageBands.ESI_II);
         }
-        // Se acepta lo que midieron. Si está fuera de lo normal, sube el riesgo; no se rechaza ni se “mejora”.
         if (!estimated.contains("systolic") && !estimated.contains("diastolic") && systolic < diastolic) {
-            score = Math.max(score, 62);
+            score = Math.max(score, TriageBands.ESI_II);
         }
         if (!estimated.contains("systolic") && systolic > 0 && systolic < 90) {
-            score = Math.max(score, 42);
+            score = Math.max(score, TriageBands.ESI_III);
         }
         AgeNorms norms = AgeNorms.of(age, pregnant);
         if (!estimated.contains("spo2")) {
             if (spo2Score <= 85) {
-                score = Math.max(score, 86);
+                score = Math.max(score, TriageBands.RESUSCITATION);
             } else if (spo2Score <= 89) {
-                score = Math.max(score, 78);
+                score = Math.max(score, TriageBands.ESI_I);
             } else if (spo2Score <= 91) {
-                score = Math.max(score, 62);
+                score = Math.max(score, TriageBands.ESI_II);
             } else if (spo2Score < 95) {
-                score = Math.max(score, 22);
+                score = Math.max(score, TriageBands.ESI_IV);
             }
         }
         if (!estimated.contains("temperature") && temperature != null) {
             double t = temperature.doubleValue();
             if (t <= 34.0) {
-                score = Math.max(score, 86);
+                score = Math.max(score, TriageBands.RESUSCITATION);
             } else if (t <= 35.0) {
-                score = Math.max(score, 78);
+                score = Math.max(score, TriageBands.ESI_I);
             } else if (t <= 35.5) {
-                score = Math.max(score, 42);
+                score = Math.max(score, TriageBands.ESI_III);
             }
         }
         if (!estimated.contains("heartRate") && norms.hrOff(heartRate)) {
-            score = Math.max(score, norms.hrFar(heartRate) ? 62 : 42);
+            score = Math.max(score, norms.hrFar(heartRate) ? TriageBands.ESI_II : TriageBands.ESI_III);
         }
         if (!estimated.contains("respiratoryRate") && norms.rrOff(respiratoryRate)) {
-            score = Math.max(score, 42);
+            score = Math.max(score, TriageBands.ESI_III);
         }
         if (pregnant) {
             if (systolic >= 160 || diastolic >= 110) {
-                score = Math.max(score, 78);
+                score = Math.max(score, TriageBands.ESI_I);
             } else if (systolic >= 140 || diastolic >= 90) {
-                score = Math.max(score, 62);
+                score = Math.max(score, TriageBands.ESI_II);
             }
             if ("hemorragia".equals(conditionId) || "abdomen".equals(conditionId) || "trauma".equals(conditionId)
                     || (gestationWeeks != null && gestationWeeks >= 20 && "convulsion".equals(conditionId))) {
-                score = Math.max(score, 62);
+                score = Math.max(score, TriageBands.ESI_II);
             }
         }
         if ("P".equals(avpu) || "U".equals(avpu)) {
-            score = Math.max(score, 86);
+            score = Math.max(score, TriageBands.RESUSCITATION);
         } else if ("V".equals(avpu)) {
-            score = Math.max(score, 78);
+            score = Math.max(score, TriageBands.ESI_I);
         }
         if (glucose != null) {
             if (glucose < 54) {
-                score = Math.max(score, 86);
+                score = Math.max(score, TriageBands.RESUSCITATION);
             } else if (glucose > 600) {
-                score = Math.max(score, 78);
+                score = Math.max(score, TriageBands.ESI_I);
             } else if (glucose < 70 || glucose > 400) {
-                score = Math.max(score, 62);
+                score = Math.max(score, TriageBands.ESI_II);
             }
         }
         if ("paro".equals(conditionId)) {
-            score = Math.max(score, 97);
+            score = Math.max(score, TriageBands.CARDIAC_ARREST);
         }
-        score = Math.min(100, Math.max(0, score));
+        score = Math.min(TriageBands.MAX, Math.max(TriageBands.MIN, score));
         BigDecimal rounded = BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(score), news);
     }
@@ -223,17 +222,17 @@ public class TriageService {
             return protocol;
         }
         double base = protocol.score().doubleValue();
-        double suggested = Math.min(100, Math.max(0, ia.getSuggestedScore()));
+        double suggested = Math.min(TriageBands.MAX, Math.max(TriageBands.MIN, ia.getSuggestedScore()));
         if (suggested <= base) {
             return protocol;
         }
         double extra = Math.min(38, suggested - base);
         boolean photoAlarm = ia.getPhotoFindings() != null && !ia.getPhotoFindings().isBlank();
         // Sin foto de alarma, no salte de un caso estable a crítica solo por el catálogo.
-        if (!photoAlarm && base < 42 && suggested >= 62) {
-            extra = Math.min(extra, Math.max(0, 41.9 - base));
+        if (!photoAlarm && base < TriageBands.ESI_III && suggested >= TriageBands.ESI_II) {
+            extra = Math.min(extra, Math.max(0, TriageBands.ESI_III - 0.1 - base));
         }
-        double fused = Math.min(100, base + extra);
+        double fused = Math.min(TriageBands.MAX, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());
     }
@@ -251,7 +250,7 @@ public class TriageService {
         if (value == null) {
             return fallback;
         }
-        return Math.min(100, Math.max(0, value));
+        return Math.min(TriageBands.MAX, Math.max(TriageBands.MIN, value));
     }
 
     private static boolean measuredCrisis(java.util.Set<String> estimated, int spo2, int hr, int sbp,
@@ -274,18 +273,8 @@ public class TriageService {
         return "P".equals(avpu) || "U".equals(avpu) || "V".equals(avpu);
     }
 
-    /** 78 crítica, 62 alta, 42 media. Motivos leves no fuerzan banda: el resto del caso manda. */
     static int esiFloor(int conditionSeverity) {
-        if (conditionSeverity >= 78) {
-            return 78;
-        }
-        if (conditionSeverity >= 62) {
-            return 62;
-        }
-        if (conditionSeverity >= 42) {
-            return 42;
-        }
-        return 0;
+        return TriageBands.esiFloor(conditionSeverity);
     }
 
     private void validate(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {
@@ -341,9 +330,9 @@ public class TriageService {
         return value.length() == 1 && "ACVPU".contains(value) ? value : null;
     }
 
-    private int scoreHistory(String texto) {
-        if (texto == null) return 0;
-        String t = texto.toLowerCase();
+    private int scoreHistory(String history) {
+        if (history == null) return 0;
+        String t = history.toLowerCase();
         int p = 0;
         if (t.contains("infarto") || t.contains("iam")) p += 10;
         if (t.contains("falla") || t.contains("icc")) p += 9;
@@ -357,10 +346,6 @@ public class TriageService {
     }
 
     TriageLevel levelFrom(double score) {
-        if (score >= 78) return TriageLevel.TRIAGE_I_ROJO;
-        if (score >= 62) return TriageLevel.TRIAGE_II_NARANJA;
-        if (score >= 42) return TriageLevel.TRIAGE_III_AMARILLO;
-        if (score >= 22) return TriageLevel.TRIAGE_IV_VERDE;
-        return TriageLevel.TRIAGE_V_AZUL;
+        return TriageBands.fromScore(score);
     }
 }
