@@ -241,7 +241,7 @@ class TriageServiceTest {
                 20, 39, 70, 116, 74, BigDecimal.valueOf(35.2), 19, "piel", "",
                 null, null, "A", true, 2, java.util.List.of("systolic", "diastolic", "respiratoryRate")
         );
-        assertThat(stable.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(78.0));
+        assertThat(stable.score()).isLessThan(BigDecimal.valueOf(62.0));
         assertThat(crash.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
         assertThat(crash.score()).isGreaterThan(stable.score());
     }
@@ -256,20 +256,29 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-23: Un síntoma del catálogo con gravedad 70 queda al menos en Alta")
-    void tc23_catalogoGravedadAlta() {
-        TriageService withCatalog = new TriageService(id -> "piel".equals(id) ? Optional.of(70) : Optional.empty());
-        TriageService.RiskResult result = withCatalog.calculate(
-                65, 72, 98, 120, 78, BigDecimal.valueOf(36.6), 16, "piel", ""
+    @DisplayName("TC-23: Dolor de pecho del catálogo sí queda en Alta; un motivo de piel con signos estables no se pega a 78")
+    void tc23_catalogoPechoAltaPielNoSePega() {
+        TriageService withCatalog = new TriageService(id -> Optional.of("sca".equals(id) ? 70 : 78));
+        TriageService.RiskResult chest = withCatalog.calculate(
+                65, 72, 98, 120, 78, BigDecimal.valueOf(36.6), 16, "sca", ""
         );
-        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
-        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+        assertThat(chest.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(chest.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
 
-        TriageService.RiskResult hinted = triageService.calculate(
-                65, 72, 98, 120, 78, BigDecimal.valueOf(36.6), 16, "piel-custom", "",
-                null, null, null, false, null, List.of(), 72
+        TriageService.RiskResult skin = withCatalog.calculate(
+                20, 84, 98, 116, 74, BigDecimal.valueOf(36.6), 16, "piel", ""
         );
-        assertThat(hinted.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
-        assertThat(hinted.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+        assertThat(skin.score()).isLessThan(BigDecimal.valueOf(62.0));
+    }
+
+    @Test
+    @DisplayName("Gemini no salta de un caso estable a crítica")
+    void fusionNoSaltaDeMinimaACritica() {
+        TriageService.RiskResult protocol = new TriageService.RiskResult(
+                BigDecimal.valueOf(30.0), TriageLevel.TRIAGE_V_AZUL, 0
+        );
+        AiAssistDTO ia = AiAssistDTO.builder().active(true).suggestedScore(78.0).build();
+        TriageService.RiskResult fused = triageService.merge(protocol, ia);
+        assertThat(fused.score()).isLessThan(BigDecimal.valueOf(62.0));
     }
 }

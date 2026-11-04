@@ -19,8 +19,8 @@ final class HospitalDatasetPack {
                 .collect(Collectors.joining("\n- "));
         return """
                 PROTOCOLO: score 0-100. Motivo + NEWS2 + edad + todos los signos medidos juntos. ESI: >=78 I, >=62 II, >=42 III, >=22 IV, resto V.
-                La gravedad del catálogo es el piso ESI si es media o más (78 crítica, 62 alta, 42 media). Lo leve no fuerza banda.
-                Integra edad, motivo, relato, foto y TODOS los números MEDIDOS. El piso del catálogo no tapa una hipoxia.
+                El catálogo fija piso en pecho, paro, derrame o trauma. Un motivo de piel/dedo con signos estables NO queda en 78.
+                Integra edad, motivo, relato, foto y TODOS los números MEDIDOS de ESTE caso. Si cambian los números, cambia el score.
                 SpO2 <=85, FC <40 o temp <=34 medidos = ESI I (86-100) aunque el motivo sea piel o un dedo.
                 Un signo ESTIMADO se ignora. Dolor de cabeza o vómito con signos de reposo = III o menos, salvo alarma en foto o signos medidos graves.
                 Catálogo:

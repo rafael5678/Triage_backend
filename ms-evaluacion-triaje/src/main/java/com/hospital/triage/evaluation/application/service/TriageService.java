@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Immediate-risk matrix: NEWS2 + complaint severity + comorbidities.
@@ -39,6 +40,11 @@ public class TriageService {
             Map.entry("fiebre", 24),
             Map.entry("gi", 18),
             Map.entry("cura", 8)
+    );
+
+    /** Motivos que sí pueden forzar banda alta/crítica aunque los signos aún se vean estables. */
+    private static final Set<String> EMERGENCY_MOTIFS = Set.of(
+            "paro", "avc", "sca", "trauma", "disnea", "sepsis", "anafilaxia", "hemorragia", "convulsion"
     );
 
     public record RiskResult(BigDecimal score, TriageLevel level, int news2) {}
@@ -108,8 +114,13 @@ public class TriageService {
                 + shockTerm
                 + ageTerm
                 + comorb * 0.55;
-        // Piso del motivo (catálogo). El dolor y los signos medidos pueden subir después.
-        score = Math.max(score, esiFloor(condition));
+        // Piso del catálogo: pecho/paro/trauma sí; un dedo con oxígeno 98 no se queda pegado en 78.
+        int catalogFloor = esiFloor(condition);
+        if (!EMERGENCY_MOTIFS.contains(conditionId == null ? "" : conditionId)
+                && !measuredCrisis(estimated, spo2Score, heartRate, systolic, temperature, avpu, band)) {
+            catalogFloor = 0;
+        }
+        score = Math.max(score, catalogFloor);
 
         if (painScale != null && painScale >= 8) {
             score += 4;
@@ -217,6 +228,10 @@ public class TriageService {
             return protocol;
         }
         double extra = Math.min(38, suggested - base);
+        // Gemini no puede saltar de un caso estable (mínima/baja) a crítica solo porque el catálogo esté alto.
+        if (base < 42 && suggested >= 62) {
+            extra = Math.min(extra, Math.max(0, 41.9 - base));
+        }
         double fused = Math.min(100, base + extra);
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());
@@ -236,6 +251,26 @@ public class TriageService {
             return fallback;
         }
         return Math.min(100, Math.max(0, value));
+    }
+
+    private static boolean measuredCrisis(java.util.Set<String> estimated, int spo2, int hr, int sbp,
+                                          BigDecimal temperature, String avpu, PediatricBand band) {
+        if (!estimated.contains("spo2") && spo2 < 95) {
+            return true;
+        }
+        if (!estimated.contains("heartRate") && hr > 0 && (hr < 50 || (band == null && hr > 130))) {
+            return true;
+        }
+        if (!estimated.contains("systolic") && sbp > 0 && (sbp < 90 || sbp >= 180)) {
+            return true;
+        }
+        if (!estimated.contains("temperature") && temperature != null) {
+            double t = temperature.doubleValue();
+            if (t <= 35.5 || t >= 39) {
+                return true;
+            }
+        }
+        return "P".equals(avpu) || "U".equals(avpu) || "V".equals(avpu);
     }
 
     /** 78 crítica, 62 alta, 42 media. Motivos leves no fuerzan banda: el resto del caso manda. */

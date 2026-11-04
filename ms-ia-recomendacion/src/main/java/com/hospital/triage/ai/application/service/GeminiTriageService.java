@@ -87,10 +87,11 @@ public class GeminiTriageService {
                 No le pidas al usuario la causa: tú das hipótesis clínicas (por ejemplo cefalea tensional vs alarma) según relato + signos + foto.
                 Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar.
                 Signos MEDIDOS de emergencia (uno solo ya basta): SpO2 <=85 → 86-100; SpO2 70 es reanimación aunque el motivo sea un dedo. FC <40 → 86-100. Temp <=35 → mínimo 78. PAS <90 → mínimo 62. Varios a la vez → 90-100.
-                NUNCA copies el score del protocolo si los signos medidos están peores. Un SpO2 70 y una FC 39 NO pueden quedar en 78.
-                El score del protocolo (%s) es una base, no un techo: si los signos medidos empeoran, SUBE. Si todo medido está en rango y solo hay una herida local, no inventes shock.
-                Gravedad de ESTE motivo en el catálogo del hospital: %s. Eso es el piso del motivo, no el techo: los signos medidos graves suben de ahí.
-                No inventes reanimación por un dolor de cabeza o un vómito con signos de reposo.
+                Puntúa SOLO este ingreso. Si cambian oxígeno, pulso o temperatura, el score DEBE cambiar. No reutilices un 78 anterior.
+                NUNCA copies el score del protocolo si no coincide con ESTOS números. SpO2 70 y FC 39 → 86-100. SpO2 98 y una herida en el dedo → 20-42, no crítica.
+                El score del protocolo (%s) es referencia. Si los signos medidos empeoran, SUBE. Si están en rango y el motivo no es pecho/paro/derrame/trauma, no pongas 78.
+                Gravedad de ESTE motivo en el catálogo del hospital: %s. Úsala en pecho, paro, derrame o trauma. En piel/dedo/cura con signos estables NO fuerces crítica.
+                No inventes reanimación por un dolor de cabeza, un vómito o un dedo hinchado con signos de reposo.
 
                 JSON:
                 {"score":0-100,
