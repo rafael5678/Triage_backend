@@ -107,6 +107,8 @@ public class TriageService {
                 + shockTerm
                 + ageTerm
                 + comorb * 0.55;
+        // Piso del motivo (catálogo). El dolor y los signos medidos pueden subir después.
+        score = Math.max(score, esiFloor(condition));
 
         if (painScale != null && painScale >= 8) {
             score += 4;
@@ -177,8 +179,6 @@ public class TriageService {
         if ("paro".equals(conditionId)) {
             score = Math.max(score, 97);
         }
-        // La gravedad que armó administración en el catálogo es el piso ESI de ese motivo.
-        score = Math.max(score, esiFloor(condition));
         score = Math.min(100, Math.max(0, score));
         BigDecimal rounded = BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(score), news);
