@@ -74,7 +74,7 @@ public class IntakeService {
                 .age(clamp(a.path("age"), 0, 120))
                 .sex(sex(GeminiClient.textOrNull(a.path("sex"))))
                 .heartRate(clamp(a.path("heartRate"), 20, 250))
-                .spo2(clamp(a.path("spo2"), 50, 100))
+                .spo2(clamp(a.path("spo2"), 0, 100))
                 .systolic(clamp(a.path("systolic"), 50, 260))
                 .diastolic(clamp(a.path("diastolic"), 20, 160))
                 .temperature(temperature(a.path("temperature")))
@@ -123,7 +123,8 @@ public class IntakeService {
                   SOLO si el relato o DATOS YA ESCRITOS traen el número. Si no se midió, usa null.
                   NUNCA inventes oxígeno bajo, pulso raro ni presión de shock. Un dolor de cabeza no es un paro.
                 - estimatedFields: vacío, salvo que copies un número dudoso del relato.
-                - Nunca cambies los DATOS YA ESCRITOS.
+                - Edad y sexo: salen del RELATO (niña de 7, joven de 9, señora de 50). No uses una edad de otro paciente.
+                - Nunca cambies los DATOS YA ESCRITOS de signos medidos.
                 - consciousness: A, C, V, P o U solo si el relato lo deja claro; si no, A.
                 - glucose y painScale solo si se mencionan.
                 - notes: máximo 3 avisos prácticos (qué medir).
