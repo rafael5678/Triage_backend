@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,8 +54,11 @@ public class EvaluationStore {
         vitalSignsRepo.save(signs);
 
         TriageEvaluation evaluation = new TriageEvaluation();
-        Optional<TriageEvaluation> previous = evaluations.findTopByPatientIdAndCurrentTrueOrderByEvaluatedAtDesc(patient.id());
+        List<TriageEvaluation> open = evaluations.findByPatientIdAndCurrentTrue(patient.id());
+        Optional<TriageEvaluation> previous = open.stream()
+                .max(Comparator.comparing(TriageEvaluation::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
         previous.ifPresent(old -> carryOver(old, evaluation));
+        open.forEach(old -> old.setCurrent(false));
         if (dto.getPresent() != null) {
             evaluation.setPresent(dto.getPresent());
         }
@@ -105,12 +110,14 @@ public class EvaluationStore {
 
     @Transactional(readOnly = true)
     public List<RankedPatientDTO> loadByStatus(CareStatus status) {
-        return toClinical(evaluations.findByStatusAndCurrentTrueOrderByRiskScoreDescEvaluatedAtAsc(status));
+        return toClinical(uniqueLatest(evaluations.findByCurrentTrueOrderByEvaluatedAtDesc()).stream()
+                .filter(row -> row.getStatus() == status)
+                .toList());
     }
 
     @Transactional(readOnly = true)
     public List<RankedPatientDTO> loadAll() {
-        return toClinical(evaluations.findByCurrentTrueOrderByEvaluatedAtDesc());
+        return toClinical(uniqueLatest(evaluations.findByCurrentTrueOrderByEvaluatedAtDesc()));
     }
 
     /** Todas las evaluaciones del paciente, de la más antigua a la más reciente. */
@@ -120,7 +127,31 @@ public class EvaluationStore {
     }
 
     public RankedPatientDTO updateStatus(UUID patientId, CareStatus newStatus) {
-        TriageEvaluation evaluation = current(patientId);
+        List<TriageEvaluation> open = evaluations.findByPatientIdAndCurrentTrue(patientId);
+        if (open.isEmpty()) {
+            throw new PatientNotFoundException(patientId.toString());
+        }
+        TriageEvaluation evaluation = open.stream()
+                .filter(row -> row.getStatus() == CareStatus.EN_ESPERA)
+                .findFirst()
+                .orElseGet(() -> open.stream()
+                        .max(Comparator.comparing(TriageEvaluation::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                        .orElseThrow(() -> new PatientNotFoundException(patientId.toString())));
+        applyStatus(evaluation, newStatus);
+        for (TriageEvaluation extra : open) {
+            if (extra.getId().equals(evaluation.getId())) {
+                continue;
+            }
+            extra.setCurrent(false);
+            if (newStatus == CareStatus.EN_ATENCION && extra.getStatus() == CareStatus.EN_ESPERA) {
+                applyStatus(extra, CareStatus.EN_ATENCION);
+            }
+        }
+        evaluations.save(evaluation);
+        return toDto(evaluation);
+    }
+
+    private static void applyStatus(TriageEvaluation evaluation, CareStatus newStatus) {
         evaluation.setStatus(newStatus);
         if (newStatus != CareStatus.EN_ESPERA) {
             evaluation.setQueuePosition(null);
@@ -128,8 +159,30 @@ public class EvaluationStore {
         if (newStatus == CareStatus.EN_ATENCION && evaluation.getCareStartedAt() == null) {
             evaluation.setCareStartedAt(OffsetDateTime.now());
         }
-        evaluations.save(evaluation);
-        return toDto(evaluation);
+    }
+
+    /** Una sola fila vigente por persona: si hubo doble clic, se queda la más reciente. */
+    static List<TriageEvaluation> uniqueLatest(List<TriageEvaluation> rows) {
+        Map<UUID, TriageEvaluation> latest = new LinkedHashMap<>();
+        for (TriageEvaluation row : rows) {
+            TriageEvaluation previous = latest.get(row.getPatientId());
+            if (previous == null || comparedLater(row, previous)) {
+                latest.put(row.getPatientId(), row);
+            }
+        }
+        return new ArrayList<>(latest.values());
+    }
+
+    private static boolean comparedLater(TriageEvaluation a, TriageEvaluation b) {
+        OffsetDateTime left = a.getEvaluatedAt();
+        OffsetDateTime right = b.getEvaluatedAt();
+        if (left == null) {
+            return false;
+        }
+        if (right == null) {
+            return true;
+        }
+        return left.isAfter(right);
     }
 
     public RankedPatientDTO markNotified(UUID patientId, String channel) {

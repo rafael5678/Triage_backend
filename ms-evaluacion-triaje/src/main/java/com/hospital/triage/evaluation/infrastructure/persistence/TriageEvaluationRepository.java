@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface TriageEvaluationRepository extends JpaRepository<TriageEvaluation, UUID> {
     Optional<TriageEvaluation> findTopByPatientIdAndCurrentTrueOrderByEvaluatedAtDesc(UUID patientId);
 
+    List<TriageEvaluation> findByPatientIdAndCurrentTrue(UUID patientId);
+
     List<TriageEvaluation> findByStatusAndCurrentTrueOrderByRiskScoreDescEvaluatedAtAsc(CareStatus status);
 
     List<TriageEvaluation> findByCurrentTrueOrderByEvaluatedAtDesc();

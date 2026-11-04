@@ -7,12 +7,15 @@ import com.hospital.triage.common.dto.VitalSignsDTO;
 import com.hospital.triage.evaluation.application.service.EvaluationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.hospital.triage.common.enums.CareStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -46,13 +49,19 @@ public class EvaluationController {
     }
 
     @PutMapping({"/evaluations/{patientId}/reassess", "/evaluaciones/{patientId}/reevaluar"})
-    public RankedPatientDTO reassess(@PathVariable UUID patientId, @Valid @RequestBody ReassessmentDTO dto) {
+    public RankedPatientDTO reassess(@PathVariable("patientId") UUID patientId, @Valid @RequestBody ReassessmentDTO dto) {
         return evaluationService.reassess(patientId, dto);
+    }
+
+    @PatchMapping({"/evaluations/{patientId}/status", "/evaluaciones/{patientId}/estado"})
+    public RankedPatientDTO updateStatus(@PathVariable("patientId") UUID patientId,
+                                         @RequestParam("status") CareStatus status) {
+        return evaluationService.updateStatus(patientId, status);
     }
 
     /** Todas las mediciones del paciente, de la primera a la última, para la línea de tiempo. */
     @GetMapping({"/patients/{patientId}/history", "/pacientes/{patientId}/historial"})
-    public java.util.List<RankedPatientDTO> history(@PathVariable UUID patientId) {
+    public java.util.List<RankedPatientDTO> history(@PathVariable("patientId") UUID patientId) {
         return evaluationService.history(patientId);
     }
 }
