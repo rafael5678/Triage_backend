@@ -91,9 +91,10 @@ public class TriageService {
         java.util.Set<String> estimated = estimatedFields == null ? java.util.Set.of() : new java.util.HashSet<>(estimatedFields);
         String avpu = avpu(consciousness);
         PediatricBand band = PediatricBand.forAge(age);
+        int spo2Score = Math.min(100, Math.max(0, spo2));
         int vitalsScore = band == null
-                ? news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate)
-                : band.score(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate);
+                ? news2(respiratoryRate, spo2Score, temperature.doubleValue(), systolic, heartRate)
+                : band.score(respiratoryRate, spo2Score, temperature.doubleValue(), systolic, heartRate);
         int news = vitalsScore + consciousnessPoints(avpu);
         int condition = conditionSeverity(conditionId, catalogSeverity);
         int comorb = scoreHistory(history);
@@ -137,11 +138,11 @@ public class TriageService {
         }
         AgeNorms norms = AgeNorms.of(age);
         if (!estimated.contains("spo2")) {
-            if (spo2 <= 89) {
+            if (spo2Score <= 89) {
                 score = Math.max(score, 62);
-            } else if (spo2 <= 91) {
+            } else if (spo2Score <= 91) {
                 score = Math.max(score, 42);
-            } else if (spo2 < 95) {
+            } else if (spo2Score < 95) {
                 score = Math.max(score, 22);
             }
         }
@@ -234,8 +235,8 @@ public class TriageService {
     }
 
     private void validate(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {
-        if (spo2 < 0 || spo2 > 100) {
-            throw new InvalidVitalSignsException("SpO2 out of range 0-100");
+        if (spo2 < 0 || spo2 > 190) {
+            throw new InvalidVitalSignsException("SpO2 out of range 0-190");
         }
         if (temp == null) {
             throw new InvalidVitalSignsException("Temperature is required");

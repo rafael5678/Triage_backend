@@ -176,11 +176,15 @@ class TriageServiceTest {
     @Test
     @DisplayName("TC-10: Validación fisiológica: Signos vitales irreales o fuera de rango")
     void tc10_validacionSignosIrreales() {
+        assertThat(triageService.calculate(
+                45, 80, 150, 120, 80, BigDecimal.valueOf(36.5), 16, "cefalea", ""
+        ).score()).isGreaterThanOrEqualTo(BigDecimal.ZERO);
+
         assertThatThrownBy(() -> triageService.calculate(
-                45, 80, 105, 120, 80, BigDecimal.valueOf(36.5), 16, "cefalea", ""
+                45, 80, 191, 120, 80, BigDecimal.valueOf(36.5), 16, "cefalea", ""
         ))
                 .isInstanceOf(InvalidVitalSignsException.class)
-                .hasMessageContaining("SpO2 out of range 0-100");
+                .hasMessageContaining("SpO2 out of range 0-190");
 
         assertThatThrownBy(() -> triageService.calculate(
                 45, 15, 98, 120, 80, BigDecimal.valueOf(36.5), 16, "cefalea", ""

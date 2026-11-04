@@ -74,7 +74,7 @@ public class IntakeService {
                 .age(clamp(a.path("age"), 0, 120))
                 .sex(sex(GeminiClient.textOrNull(a.path("sex"))))
                 .heartRate(clamp(a.path("heartRate"), 20, 250))
-                .spo2(clamp(a.path("spo2"), 0, 100))
+                .spo2(clamp(a.path("spo2"), 0, 190))
                 .systolic(clamp(a.path("systolic"), 50, 260))
                 .diastolic(clamp(a.path("diastolic"), 20, 160))
                 .temperature(temperature(a.path("temperature")))
@@ -121,6 +121,7 @@ public class IntakeService {
                 - reason: resumen corto en español sencillo (máx 200 caracteres).
                 - Signos vitales (heartRate, spo2, systolic, diastolic, temperature, respiratoryRate):
                   SOLO si el relato o DATOS YA ESCRITOS traen el número. Si no se midió, usa null.
+                  Copia spo2 aunque pase de 100 (hasta 190) y heartRate hasta 250. No recortes a 100.
                   NUNCA inventes oxígeno bajo, pulso raro ni presión de shock. Un dolor de cabeza no es un paro.
                 - estimatedFields: vacío, salvo que copies un número dudoso del relato.
                 - Edad y sexo: salen del RELATO (niña de 7, joven de 9, señora de 50). No uses una edad de otro paciente.

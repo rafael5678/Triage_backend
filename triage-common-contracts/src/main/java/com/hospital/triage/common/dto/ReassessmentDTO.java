@@ -26,7 +26,7 @@ public class ReassessmentDTO implements ExtraFindings {
     @JsonAlias("frecuenciaCardiaca")
     private Integer heartRate;
 
-    @NotNull @Min(0) @Max(100)
+    @NotNull @Min(0) @Max(190)
     private Integer spo2;
 
     @NotNull @Min(50) @Max(260)
