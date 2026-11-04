@@ -7,7 +7,7 @@ package com.hospital.triage.evaluation.application.service;
 record PediatricBand(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin) {
 
     static PediatricBand forAge(int age) {
-        if (age >= 16) return null;
+        if (age >= 18) return null;
         if (age < 1) return new PediatricBand(100, 160, 30, 60, 70);
         if (age < 4) return new PediatricBand(90, 150, 24, 40, 75);
         if (age < 6) return new PediatricBand(80, 140, 22, 34, 80);

@@ -68,6 +68,8 @@ class GeminiTriageServiceTest {
     @DisplayName("Rangos de una niña de 9 años para el prompt de Gemini")
     void ageHintNueveAnos() {
         assertThat(GeminiTriageService.ageHint(9)).contains("9 años").contains("70-120").contains("95-100");
+        assertThat(GeminiTriageService.ageHint(7)).contains("70-120");
+        assertThat(GeminiTriageService.ageHint(17, true)).contains("adolescente").contains("EMBARAZADA");
     }
 
     @Test

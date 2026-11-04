@@ -228,8 +228,9 @@ public class TriageService {
             return protocol;
         }
         double extra = Math.min(38, suggested - base);
-        // Gemini no puede saltar de un caso estable (mínima/baja) a crítica solo porque el catálogo esté alto.
-        if (base < 42 && suggested >= 62) {
+        boolean photoAlarm = ia.getPhotoFindings() != null && !ia.getPhotoFindings().isBlank();
+        // Sin foto de alarma, no salte de un caso estable a crítica solo por el catálogo.
+        if (!photoAlarm && base < 42 && suggested >= 62) {
             extra = Math.min(extra, Math.max(0, 41.9 - base));
         }
         double fused = Math.min(100, base + extra);

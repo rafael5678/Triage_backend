@@ -59,6 +59,15 @@ class ClinicalRulesTest {
     }
 
     @Test
+    @DisplayName("Niña de 7 y gestante de 17 usan su propio pulso normal")
+    void ninaSieteYGestanteDiecisiete() {
+        assertThat(AgeNorms.of(7).hrOff(100)).isFalse();
+        assertThat(AgeNorms.of(7).hrOff(55)).isTrue();
+        assertThat(AgeNorms.of(17, true).hrOff(105)).isFalse();
+        assertThat(AgeNorms.of(40, false).hrOff(105)).isTrue();
+    }
+
+    @Test
     @DisplayName("CR-04: Antes de la semana 20 la presión alta no es preeclampsia, pero sí pide valoración obstétrica")
     void cr04_antesDeVeinteSemanas() {
         var d = destinations.decide(TriageLevel.TRIAGE_III_AMARILLO, "cefalea", 25, null, true, 12, 165, 100);

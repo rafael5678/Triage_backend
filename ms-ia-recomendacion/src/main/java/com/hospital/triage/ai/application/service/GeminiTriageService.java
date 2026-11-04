@@ -133,7 +133,7 @@ public class GeminiTriageService {
                 c.age(), c.sex() == null ? "" : c.sex(),
                 !c.pregnant() ? "" : "  EMBARAZADA" + (c.gestationWeeks() == null ? "" : " de " + c.gestationWeeks() + " semanas")
                         + " (considera preeclampsia, hemorragia obstétrica, bienestar fetal)",
-                c.age() < 16 ? "\n                NIÑO/ADOLESCENTE: usa rangos pediátricos para su edad, no los de adulto." : "",
+                c.age() < 18 ? "\n                NIÑO/ADOLESCENTE: usa rangos de su edad, no los de adulto. Niña de 7: pulso 70-120. Gestante de 17: pulso ~70-125, oxígeno 95-100, presión <140/90." : "",
                 c.heartRate(), c.spo2(), c.systolic(), c.diastolic(), c.temperature(), c.respiratoryRate(),
                 c.glucose() == null ? "no medida" : c.glucose(),
                 c.painScale() == null ? "no dicho" : c.painScale(),
@@ -156,8 +156,8 @@ public class GeminiTriageService {
         } else if (age < 6) {
             base = age + " años: pulso 80-140, respiración 22-34, presión 80-115, oxígeno 95-100";
         } else if (age < 12) {
-            base = age + " años: pulso 70-120, respiración 18-30, presión 85-120, oxígeno 95-100";
-        } else if (age < 16) {
+            base = age + " años: pulso 70-120, respiración 18-30, presión 85-120, oxígeno 95-100 (niña de 7: eso es lo normal, 140 no)";
+        } else if (age < 18) {
             base = age + " años (adolescente): pulso 60-110, respiración 12-24, presión 90-125, oxígeno 95-100";
         } else if (age < 30) {
             base = age + " años (joven): pulso 60-100, respiración 12-20, presión 90-120, oxígeno 95-100";

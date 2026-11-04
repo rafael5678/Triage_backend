@@ -280,5 +280,12 @@ class TriageServiceTest {
         AiAssistDTO ia = AiAssistDTO.builder().active(true).suggestedScore(78.0).build();
         TriageService.RiskResult fused = triageService.merge(protocol, ia);
         assertThat(fused.score()).isLessThan(BigDecimal.valueOf(62.0));
+
+        AiAssistDTO withPhoto = AiAssistDTO.builder()
+                .active(true).suggestedScore(86.0)
+                .photoFindings("Sangrado activo extenso en la foto")
+                .build();
+        TriageService.RiskResult fromPhoto = triageService.merge(protocol, withPhoto);
+        assertThat(fromPhoto.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
     }
 }
