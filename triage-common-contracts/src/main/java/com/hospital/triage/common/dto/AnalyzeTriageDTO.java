@@ -46,6 +46,11 @@ public class AnalyzeTriageDTO implements ExtraFindings {
     @JsonAlias("lesionId")
     private String conditionId;
 
+    @Min(0)
+    @Max(100)
+    @JsonAlias("gravedadSintoma")
+    private Integer conditionSeverity;
+
     @Size(max = 500)
     @JsonAlias("motivo")
     private String reason;

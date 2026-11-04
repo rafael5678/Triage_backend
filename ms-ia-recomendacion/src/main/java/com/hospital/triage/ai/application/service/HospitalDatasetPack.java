@@ -19,6 +19,7 @@ final class HospitalDatasetPack {
                 .collect(Collectors.joining("\n- "));
         return """
                 PROTOCOLO: score 0-100. Motivo + NEWS2 + edad + todos los signos medidos juntos. ESI: >=78 I, >=62 II, >=42 III, >=22 IV, resto V.
+                La gravedad del catálogo es el piso ESI de ese motivo (78 crítica, 62 alta, 42 media, 22 baja).
                 No marques crítica por un solo signo. Integra edad, motivo y el resto de números.
                 Un signo ESTIMADO se ignora. Dolor de cabeza o vómito con signos de reposo = III o menos, salvo rigidez de cuello, peor cefalea de la vida, o varios signos medidos graves.
                 Catálogo:

@@ -18,4 +18,9 @@ public interface ExtraFindings {
     String getPhotoMime();
 
     List<String> getEstimatedFields();
+
+    /** Gravedad 0-100 del síntoma en el catálogo del hospital (la que definió administración). */
+    default Integer getConditionSeverity() {
+        return null;
+    }
 }

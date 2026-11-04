@@ -86,6 +86,7 @@ spring:
           uri: ${MS_COLA_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/triage/care/**
+            - Method=GET,PATCH,POST,OPTIONS
 
         - id: queue-events-sse
           uri: ${MS_COLA_URL:http://localhost:8083}

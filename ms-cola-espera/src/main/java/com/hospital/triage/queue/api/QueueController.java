@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -74,26 +75,26 @@ public class QueueController {
         return events.subscribe();
     }
 
-    @PatchMapping({"/care/{patientId}", "/atender/{patientId}"})
-    public RankedPatientDTO startCare(@PathVariable UUID patientId) {
+    @RequestMapping(path = {"/care/{patientId}", "/atender/{patientId}"}, method = {RequestMethod.PATCH, RequestMethod.POST})
+    public RankedPatientDTO startCare(@PathVariable("patientId") UUID patientId) {
         return changed(queueService.startCare(patientId));
     }
 
     @PatchMapping({"/care/{patientId}/status", "/atender/{patientId}/estado"})
-    public RankedPatientDTO updateStatus(@PathVariable UUID patientId,
+    public RankedPatientDTO updateStatus(@PathVariable("patientId") UUID patientId,
                                          @RequestParam(value = "status") CareStatus status) {
         return changed(queueService.updateStatus(patientId, status));
     }
 
     /** present=false: se registró pero todavía no está en la sala. */
     @PatchMapping({"/care/{patientId}/presence", "/atender/{patientId}/presencia"})
-    public RankedPatientDTO presence(@PathVariable UUID patientId, @RequestParam("present") boolean present) {
+    public RankedPatientDTO presence(@PathVariable("patientId") UUID patientId, @RequestParam("present") boolean present) {
         return changed(queueService.setPresence(patientId, present));
     }
 
     /** El personal avisó al paciente (por ejemplo, con el botón de WhatsApp de la app). */
     @PostMapping({"/care/{patientId}/notified", "/atender/{patientId}/avisado"})
-    public RankedPatientDTO notified(@PathVariable UUID patientId,
+    public RankedPatientDTO notified(@PathVariable("patientId") UUID patientId,
                                      @RequestParam(value = "channel", defaultValue = "MANUAL") String channel) {
         return changed(queueService.markNotified(patientId, channel));
     }

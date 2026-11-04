@@ -6,6 +6,7 @@ import com.hospital.triage.common.dto.RankedPatientDTO;
 import com.hospital.triage.common.enums.CareStatus;
 import com.hospital.triage.queue.application.port.EvaluationPort;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -14,6 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class QueueService {
@@ -59,7 +61,11 @@ public class QueueService {
 
     public RankedPatientDTO updateStatus(UUID patientId, CareStatus newStatus) {
         RankedPatientDTO updated = evaluations.updateStatus(patientId, newStatus);
-        ranked(CareStatus.EN_ESPERA);
+        try {
+            ranked(CareStatus.EN_ESPERA);
+        } catch (RuntimeException ex) {
+            log.warn("El estado ya cambió; no se pudieron recalcular puestos: {}", ex.getMessage());
+        }
         return updated;
     }
 

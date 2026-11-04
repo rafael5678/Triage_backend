@@ -77,6 +77,16 @@ public class TriageService {
                                 int respiratoryRate, String conditionId, String history,
                                 Integer glucose, Integer painScale, String consciousness,
                                 boolean pregnant, Integer gestationWeeks, List<String> estimatedFields) {
+        return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                conditionId, history, glucose, painScale, consciousness, pregnant, gestationWeeks,
+                estimatedFields, null);
+    }
+
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history,
+                                Integer glucose, Integer painScale, String consciousness,
+                                boolean pregnant, Integer gestationWeeks, List<String> estimatedFields,
+                                Integer catalogSeverity) {
         validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
         java.util.Set<String> estimated = estimatedFields == null ? java.util.Set.of() : new java.util.HashSet<>(estimatedFields);
         String avpu = avpu(consciousness);
@@ -85,7 +95,7 @@ public class TriageService {
                 ? news2(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate)
                 : band.score(respiratoryRate, spo2, temperature.doubleValue(), systolic, heartRate);
         int news = vitalsScore + consciousnessPoints(avpu);
-        int condition = conditionSeverity(conditionId);
+        int condition = conditionSeverity(conditionId, catalogSeverity);
         int comorb = scoreHistory(history);
 
         double shockTerm = band == null
@@ -167,6 +177,8 @@ public class TriageService {
         if ("paro".equals(conditionId)) {
             score = Math.max(score, 97);
         }
+        // La gravedad que armó administración en el catálogo es el piso ESI de ese motivo.
+        score = Math.max(score, esiFloor(condition));
         score = Math.min(100, Math.max(0, score));
         BigDecimal rounded = BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(score), news);
@@ -191,12 +203,37 @@ public class TriageService {
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());
     }
 
-    private int conditionSeverity(String conditionId) {
+    private int conditionSeverity(String conditionId, Integer catalogSeverity) {
         if (conditionId == null || conditionId.isBlank()) {
-            return 40;
+            return clampSeverity(catalogSeverity, 40);
         }
         return symptoms.severityOf(conditionId)
+                .or(() -> catalogSeverity != null ? java.util.Optional.of(clampSeverity(catalogSeverity, catalogSeverity)) : java.util.Optional.empty())
                 .orElseGet(() -> CONDITION_SEVERITY.getOrDefault(conditionId, 40));
+    }
+
+    private static int clampSeverity(Integer value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        return Math.min(100, Math.max(0, value));
+    }
+
+    /** 78 crítica, 62 alta, 42 media, 22 baja. El número del catálogo manda la banda, no un 38% diluido. */
+    static int esiFloor(int conditionSeverity) {
+        if (conditionSeverity >= 78) {
+            return 78;
+        }
+        if (conditionSeverity >= 62) {
+            return 62;
+        }
+        if (conditionSeverity >= 42) {
+            return 42;
+        }
+        if (conditionSeverity >= 22) {
+            return 22;
+        }
+        return 0;
     }
 
     private void validate(int fc, int spo2, int pas, int pad, BigDecimal temp, int fr) {

@@ -146,7 +146,7 @@ public class EvaluationService {
                          boolean consultAi) {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
-                pregnant, gestationWeeks, extra.getEstimatedFields());
+                pregnant, gestationWeeks, extra.getEstimatedFields(), extra.getConditionSeverity());
         // Guardar en cola no consulta Gemini: el análisis ya se vio al calcular.
         if (!consultAi) {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();

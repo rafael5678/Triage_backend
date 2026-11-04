@@ -27,6 +27,11 @@ public class VitalSignsDTO implements ExtraFindings {
     @JsonAlias("pacienteId")
     private UUID patientId;
 
+    @Min(0)
+    @Max(100)
+    @JsonAlias("gravedadSintoma")
+    private Integer conditionSeverity;
+
     @NotNull @Min(20) @Max(250)
     @JsonAlias("frecuenciaCardiaca")
     private Integer heartRate;

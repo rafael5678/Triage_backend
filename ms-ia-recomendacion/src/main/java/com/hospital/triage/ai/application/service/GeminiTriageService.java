@@ -76,6 +76,7 @@ public class GeminiTriageService {
                 Un solo número raro no basta para poner crítica. Varios graves a la vez, o un motivo de emergencia con signos malos, sí pueden subir el score.
                 Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar. No inventes shock por un dato de reposo.
                 El score del protocolo (%s) es una base, no un techo: si el conjunto lo justifica, pon 78-100; si el conjunto es leve, quédate cerca de esa base.
+                Gravedad de ESTE motivo en el catálogo del hospital: %s. Si es >=62 (Alta) o >=78 (Crítica), no bajes de esa banda: administración la definió así.
                 No inventes reanimación por un dolor de cabeza o un vómito con signos de reposo.
 
                 JSON:
@@ -105,6 +106,7 @@ public class GeminiTriageService {
                 NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
                 String.valueOf(c.protocolScore()),
+                chosen == null ? "no está en el catálogo" : String.valueOf(chosen.getSeverity()),
                 hasPhoto ? "qué se ve en la foto, breve" : "",
                 HospitalDatasetPack.build(catalog),
                 c.conditionId() == null ? "" : c.conditionId(),

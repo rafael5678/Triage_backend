@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -242,5 +243,23 @@ class TriageServiceTest {
         var critical = triageService.calculate(20, 72, 89, 116, 74, BigDecimal.valueOf(36.6), 16, "cura", "");
         assertThat(low.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(42.0));
         assertThat(critical.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+    }
+
+    @Test
+    @DisplayName("TC-23: Un síntoma del catálogo con gravedad 70 queda al menos en Alta")
+    void tc23_catalogoGravedadAlta() {
+        TriageService withCatalog = new TriageService(id -> "piel".equals(id) ? Optional.of(70) : Optional.empty());
+        TriageService.RiskResult result = withCatalog.calculate(
+                65, 72, 98, 120, 78, BigDecimal.valueOf(36.6), 16, "piel", ""
+        );
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+
+        TriageService.RiskResult hinted = triageService.calculate(
+                65, 72, 98, 120, 78, BigDecimal.valueOf(36.6), 16, "piel-custom", "",
+                null, null, null, false, null, List.of(), 72
+        );
+        assertThat(hinted.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        assertThat(hinted.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
     }
 }
