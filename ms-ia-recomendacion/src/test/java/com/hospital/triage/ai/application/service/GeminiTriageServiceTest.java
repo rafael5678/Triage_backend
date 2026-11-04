@@ -65,6 +65,12 @@ class GeminiTriageServiceTest {
     }
 
     @Test
+    @DisplayName("Rangos de una niña de 9 años para el prompt de Gemini")
+    void ageHintNueveAnos() {
+        assertThat(GeminiTriageService.ageHint(9)).contains("9 años").contains("70-120").contains("95-100");
+    }
+
+    @Test
     @DisplayName("TC-11: API key de Gemini ausente o vacía -> Fallback silencioso sin invocar HTTP")
     void tc11_apiKeyAusente() {
         ReflectionTestUtils.setField(client, "apiKey", "");
@@ -158,6 +164,7 @@ class GeminiTriageServiceTest {
 
         String body = bodyOf(sent.getValue());
         assertThat(body).contains("\"inlineData\"").contains("\"data\":\"QUJD\"").contains("image/jpeg");
+        assertThat(body).contains("HAY FOTO. Mírala con detalle");
         assertThat(result.getPhotoFindings()).isEqualTo("Quemadura de segundo grado en antebrazo");
         assertThat(result.getSuggestedArea()).isEqualTo("URGENCIAS");
     }

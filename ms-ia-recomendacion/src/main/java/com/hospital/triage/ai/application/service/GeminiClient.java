@@ -143,7 +143,7 @@ public class GeminiClient {
                 }
                 String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidate + ":generateContent";
                 HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                        .timeout(Duration.ofSeconds(20))
+                        .timeout(image != null ? Duration.ofSeconds(45) : Duration.ofSeconds(22))
                         .header("Content-Type", "application/json")
                         .header("x-goog-api-key", apiKey.trim())
                         .POST(HttpRequest.BodyPublishers.ofString(body))

@@ -33,13 +33,17 @@ public class GeminiTriageService {
         var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Symptom chosen = c.conditionId() == null ? null : symptoms.findById(c.conditionId()).orElse(null);
         boolean hasPhoto = GeminiClient.cleanBase64(c.photoBase64()) != null;
-        Optional<JsonNode> answer = gemini.generate(prompt(c, catalog, chosen, hasPhoto), c.photoBase64(), c.photoMime(), 700);
+        Optional<JsonNode> answer = gemini.generate(
+                prompt(c, catalog, chosen, hasPhoto),
+                c.photoBase64(),
+                c.photoMime(),
+                hasPhoto ? 1600 : 1100);
         if (answer.isEmpty()) {
             return AiAssistDTO.builder().active(false).protocolScore(c.protocolScore()).build();
         }
         JsonNode parsed = answer.get();
-        List<String> fromDataset = GeminiClient.texts(parsed.path("fromDataset"), 3);
-        List<String> fromGemini = GeminiClient.texts(parsed.path("fromGemini"), 3);
+        List<String> fromDataset = GeminiClient.texts(parsed.path("fromDataset"), 4);
+        List<String> fromGemini = GeminiClient.texts(parsed.path("fromGemini"), 6);
         List<String> reasons = new ArrayList<>(fromDataset);
         reasons.addAll(fromGemini);
         if (reasons.isEmpty()) {
@@ -70,29 +74,38 @@ public class GeminiTriageService {
         String estimated = c.estimatedFields() == null || c.estimatedFields().isEmpty()
                 ? "ninguno (todos medidos)"
                 : String.join(", ", c.estimatedFields()) + " (NO MEDIDOS: no inventes shock ni reanimación)";
+        String photoBlock = hasPhoto
+                ? "HAY FOTO. Mírala con detalle ANTES de puntuar: color de piel y labios, esfuerzo al respirar, heridas (tamaño, profundidad, sangrado, suciedad, humedad o sequedad), quemaduras, erupción, hinchazón, ojos, si parece consciente, sudor. Describe SOLO lo que se ve. Si está borrosa, dilo. Una foto de emergencia (sangrado activo, quemadura extensa, cianosis) puede subir el score aunque el motivo escrito sea leve."
+                : "No hay foto. photoFindings vacío.";
         return """
-                Eres apoyo de triage. Español sencillo. No dramatizes.
-                Mira el caso COMPLETO: edad (rangos normales cambian a los 1, 4, 16, 30, 45, 60 y 70 años), motivo, relato, antecedentes y TODOS los signos MEDIDOS juntos.
-                Un solo número raro no basta para poner crítica. Varios graves a la vez, o un motivo de emergencia con signos malos, sí pueden subir el score.
-                Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar. No inventes shock por un dato de reposo.
-                El score del protocolo (%s) es una base, no un techo: si el conjunto lo justifica, pon 78-100; si el conjunto es leve, quédate cerca de esa base.
-                Gravedad de ESTE motivo en el catálogo del hospital: %s. Si es >=62 (Alta) o >=78 (Crítica), no bajes de esa banda: administración la definió así.
+                Eres apoyo de triage ESI en urgencias de Colombia. Español sencillo. No dramatizes ni inventes números.
+                Analiza el caso COMPLETO junto: edad, sexo, motivo, relato, antecedentes, pulso, oxígeno, presión, temperatura, respiración, dolor, glucosa, conciencia y la foto si hay.
+                Rangos normales para ESTA edad: %s.
+                Un SpO2 mayor de 100 es el número del oxímetro; para saturación clínica usa min(100, SpO2). No lo trates como hipoxia.
+                El pulso se acepta alto si lo midieron; contrástalo con el rango de la edad (en una niña de 9 años 70-120 en reposo).
+                Si hay sudor, piel húmeda, mucosas secas o herida húmeda en el relato o la foto, úsalo.
+                No le pidas al usuario la causa: tú das hipótesis clínicas (por ejemplo cefalea tensional vs alarma) según relato + signos + foto.
+                Un solo número raro no basta para crítica. Varios graves a la vez, o emergencia en foto/relato con signos malos, sí.
+                Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar.
+                El score del protocolo (%s) es una base, no un techo: si el conjunto es grave, 78-100; si es leve (dolor de cabeza con signos de reposo y foto sin alarma), quédate cerca de esa base (mínima o baja).
+                Gravedad de ESTE motivo en el catálogo del hospital: %s. Si es >=62 (Alta) o >=78 (Crítica), no bajes de esa banda.
                 No inventes reanimación por un dolor de cabeza o un vómito con signos de reposo.
 
                 JSON:
                 {"score":0-100,
                  "dangerLead":"una frase: qué está mal o por qué no es grave",
                  "meaning":"qué implica en la cola, 1 frase",
-                 "fromDataset":["máx 2, con los números reales"],
-                 "fromGemini":["máx 2, criterio clínico del motivo"],
+                 "fromDataset":["máx 3, con los números reales vs la edad"],
+                 "fromGemini":["máx 5: relato, foto y criterio clínico; hipótesis, no diagnóstico cerrado"],
                  "immediateActions":["máx 4, concretas"],
                  "testsToOrder":["máx 3"],
                  "monitoring":["máx 3"],
                  "redFlags":["máx 3: cuándo volver a triaje"],
-                 "symptomExplanation":"2 frases: por qué este motivo importa y qué dicen estos signos",
+                 "symptomExplanation":"4 a 6 frases: cada signo clave vs la edad, qué sugiere el relato, qué muestra la foto",
                  "suggestedArea":"REANIMACION | URGENCIAS_CRITICAS | URGENCIAS | CONSULTA_PRIORITARIA | CONSULTA_EXTERNA",
                  "photoFindings":"%s"}
 
+                %s
                 %s
 
                 CASO ACTUAL:
@@ -105,10 +118,12 @@ public class GeminiTriageService {
                 Signos estimados: %s
                 NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
+                ageHint(c.age()),
                 String.valueOf(c.protocolScore()),
                 chosen == null ? "no está en el catálogo" : String.valueOf(chosen.getSeverity()),
-                hasPhoto ? "qué se ve en la foto, breve" : "",
+                hasPhoto ? "3 a 6 frases de lo que VES en la foto" : "",
                 HospitalDatasetPack.build(catalog),
+                photoBlock,
                 c.conditionId() == null ? "" : c.conditionId(),
                 chosen == null ? "" : chosen.getLabel(),
                 c.reason() == null ? "" : c.reason(),
@@ -124,5 +139,36 @@ public class GeminiTriageService {
                 estimated,
                 c.news2(), c.protocolScore()
         );
+    }
+
+    static String ageHint(int age) {
+        if (age < 1) {
+            return "menor de 1 año: pulso 100-160, respiración 30-60, presión de arriba 70-100, oxígeno 95-100";
+        }
+        if (age < 4) {
+            return age + " años (niño pequeño): pulso 90-150, respiración 24-40, presión 75-110, oxígeno 95-100";
+        }
+        if (age < 6) {
+            return age + " años: pulso 80-140, respiración 22-34, presión 80-115, oxígeno 95-100";
+        }
+        if (age < 12) {
+            return age + " años: pulso 70-120, respiración 18-30, presión 85-120, oxígeno 95-100";
+        }
+        if (age < 16) {
+            return age + " años (adolescente): pulso 60-110, respiración 12-24, presión 90-125, oxígeno 95-100";
+        }
+        if (age < 30) {
+            return age + " años (joven): pulso 60-100, respiración 12-20, presión 90-120, oxígeno 95-100";
+        }
+        if (age < 45) {
+            return age + " años: pulso 60-100, respiración 12-20, presión 95-130, oxígeno 95-100";
+        }
+        if (age < 60) {
+            return age + " años: pulso 60-95, respiración 12-20, presión 100-135, oxígeno 95-100";
+        }
+        if (age < 70) {
+            return age + " años: pulso 60-90, respiración 12-22, presión 100-145, oxígeno 95-100";
+        }
+        return age + " años (adulto mayor): pulso 55-90, respiración 12-22, presión 100-150, oxígeno 95-100";
     }
 }

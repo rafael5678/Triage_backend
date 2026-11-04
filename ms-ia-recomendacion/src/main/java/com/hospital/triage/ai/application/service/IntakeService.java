@@ -36,7 +36,7 @@ public class IntakeService {
         List<Symptom> catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Map<String, Object> known = request.getKnown() == null ? Map.of() : request.getKnown();
         boolean hasPhoto = GeminiClient.cleanBase64(request.getPhotoBase64()) != null;
-        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), 512);
+        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), hasPhoto ? 900 : 640);
         if (answer.isEmpty()) {
             return IntakeSuggestion.builder().active(false).build();
         }
@@ -114,11 +114,11 @@ public class IntakeService {
         return """
                 Eres enfermera jefe de triage de urgencias en Colombia. Con el relato%s llena el formulario de ingreso.
                 Reglas:
-                - conditionId: SOLO uno de estos ids del catálogo (el motivo más grave):
+                - conditionId: SOLO uno de estos ids del catálogo (el motivo más grave entre relato y foto):
                 - %s
                 - comorbidityIds: SOLO ids de esta lista, si el relato los menciona:
                 - %s
-                - reason: resumen corto en español sencillo (máx 200 caracteres).
+                - reason: resumen corto en español sencillo (máx 200 caracteres). Incluye lo grave que se vea en la foto.
                 - Signos vitales (heartRate, spo2, systolic, diastolic, temperature, respiratoryRate):
                   SOLO si el relato o DATOS YA ESCRITOS traen el número. Si no se midió, usa null.
                   Copia spo2 aunque pase de 100 (hasta 190) y heartRate hasta 250. No recortes a 100.
@@ -128,7 +128,8 @@ public class IntakeService {
                 - Nunca cambies los DATOS YA ESCRITOS de signos medidos.
                 - consciousness: A, C, V, P o U solo si el relato lo deja claro; si no, A.
                 - glucose y painScale solo si se mencionan.
-                - notes: máximo 3 avisos prácticos (qué medir).
+                - Si hay foto: mírala con detalle (herida, sangrado, color de piel/labios, hinchazón, quemadura, humedad, esfuerzo al respirar). No inventes signos vitales desde la foto.
+                - notes: máximo 4 avisos prácticos (qué medir y qué alerta ves).
 
                 Responde SOLO este JSON:
                 {"conditionId":"","reason":"","comorbidityIds":[],"age":null,"sex":null,
@@ -144,7 +145,7 @@ public class IntakeService {
                 hasPhoto ? " y la foto adjunta" : "",
                 catalogText,
                 comorbidities.isBlank() ? "(sin lista)" : comorbidities,
-                hasPhoto ? "qué se ve en la foto y qué tan grave parece" : "",
+                hasPhoto ? "3 a 5 frases de lo que VES (no lo que imaginas) y qué tan grave parece" : "",
                 knownText,
                 request.getStory() == null ? "" : request.getStory()
         );
