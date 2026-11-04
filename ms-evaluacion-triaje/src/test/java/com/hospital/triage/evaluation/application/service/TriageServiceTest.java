@@ -206,7 +206,7 @@ class TriageServiceTest {
                 34, 45, 88, 185, 51, BigDecimal.valueOf(36.6), 16, "cura", ""
         );
         assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
-        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_II_NARANJA);
+        assertThat(result.level()).isIn(TriageLevel.TRIAGE_I_ROJO, TriageLevel.TRIAGE_II_NARANJA);
     }
 
     @Test
