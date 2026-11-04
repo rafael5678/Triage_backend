@@ -136,7 +136,7 @@ public class TriageService {
         if (!estimated.contains("systolic") && systolic > 0 && systolic < 90) {
             score = Math.max(score, 42);
         }
-        AgeNorms norms = AgeNorms.of(age);
+        AgeNorms norms = AgeNorms.of(age, pregnant);
         if (!estimated.contains("spo2")) {
             if (spo2Score <= 89) {
                 score = Math.max(score, 62);

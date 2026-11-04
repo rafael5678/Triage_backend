@@ -44,6 +44,9 @@ class ClinicalRulesTest {
     @Test
     @DisplayName("CR-03: Embarazada con presión 165/112 sube al menos a 78 y activa código preeclampsia")
     void cr03_preeclampsiaSevera() {
+        assertThat(AgeNorms.of(26, true).hrOff(108)).isFalse();
+        assertThat(AgeNorms.of(26, false).hrOff(108)).isTrue();
+
         var pregnant = score(28, 92, 98, 165, 112, 36.8, 18, "cefalea", true, 32);
         var notPregnant = score(28, 92, 98, 165, 112, 36.8, 18, "cefalea", false, null);
 

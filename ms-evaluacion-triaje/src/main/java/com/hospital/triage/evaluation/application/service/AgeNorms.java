@@ -4,6 +4,25 @@ package com.hospital.triage.evaluation.application.service;
 record AgeNorms(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin, int sbpMax) {
 
     static AgeNorms of(int age) {
+        return of(age, false);
+    }
+
+    static AgeNorms of(int age, boolean pregnant) {
+        AgeNorms n = byAge(age);
+        if (!pregnant) {
+            return n;
+        }
+        return new AgeNorms(
+                Math.max(55, n.hrMin() - 5),
+                n.hrMax() + 15,
+                n.rrMin(),
+                Math.max(n.rrMax(), 22),
+                n.sbpMin(),
+                Math.min(n.sbpMax(), 139)
+        );
+    }
+
+    private static AgeNorms byAge(int age) {
         if (age < 1) return new AgeNorms(100, 160, 30, 60, 70, 100);
         if (age < 4) return new AgeNorms(90, 150, 24, 40, 75, 110);
         if (age < 6) return new AgeNorms(80, 140, 22, 34, 80, 115);

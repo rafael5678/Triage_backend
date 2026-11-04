@@ -118,7 +118,7 @@ public class GeminiTriageService {
                 Signos estimados: %s
                 NEWS2:%d  Score del protocolo/dataset:%s
                 """.formatted(
-                ageHint(c.age()),
+                ageHint(c.age(), c.pregnant()),
                 String.valueOf(c.protocolScore()),
                 chosen == null ? "no está en el catálogo" : String.valueOf(chosen.getSeverity()),
                 hasPhoto ? "3 a 6 frases de lo que VES en la foto" : "",
@@ -142,33 +142,35 @@ public class GeminiTriageService {
     }
 
     static String ageHint(int age) {
+        return ageHint(age, false);
+    }
+
+    static String ageHint(int age, boolean pregnant) {
+        String base;
         if (age < 1) {
-            return "menor de 1 año: pulso 100-160, respiración 30-60, presión de arriba 70-100, oxígeno 95-100";
+            base = "menor de 1 año: pulso 100-160, respiración 30-60, presión de arriba 70-100, oxígeno 95-100";
+        } else if (age < 4) {
+            base = age + " años (niño pequeño): pulso 90-150, respiración 24-40, presión 75-110, oxígeno 95-100";
+        } else if (age < 6) {
+            base = age + " años: pulso 80-140, respiración 22-34, presión 80-115, oxígeno 95-100";
+        } else if (age < 12) {
+            base = age + " años: pulso 70-120, respiración 18-30, presión 85-120, oxígeno 95-100";
+        } else if (age < 16) {
+            base = age + " años (adolescente): pulso 60-110, respiración 12-24, presión 90-125, oxígeno 95-100";
+        } else if (age < 30) {
+            base = age + " años (joven): pulso 60-100, respiración 12-20, presión 90-120, oxígeno 95-100";
+        } else if (age < 45) {
+            base = age + " años: pulso 60-100, respiración 12-20, presión 95-130, oxígeno 95-100";
+        } else if (age < 60) {
+            base = age + " años: pulso 60-95, respiración 12-20, presión 100-135, oxígeno 95-100";
+        } else if (age < 70) {
+            base = age + " años: pulso 60-90, respiración 12-22, presión 100-145, oxígeno 95-100";
+        } else {
+            base = age + " años (adulto mayor): pulso 55-90, respiración 12-22, presión 100-150, oxígeno 95-100";
         }
-        if (age < 4) {
-            return age + " años (niño pequeño): pulso 90-150, respiración 24-40, presión 75-110, oxígeno 95-100";
+        if (!pregnant) {
+            return base;
         }
-        if (age < 6) {
-            return age + " años: pulso 80-140, respiración 22-34, presión 80-115, oxígeno 95-100";
-        }
-        if (age < 12) {
-            return age + " años: pulso 70-120, respiración 18-30, presión 85-120, oxígeno 95-100";
-        }
-        if (age < 16) {
-            return age + " años (adolescente): pulso 60-110, respiración 12-24, presión 90-125, oxígeno 95-100";
-        }
-        if (age < 30) {
-            return age + " años (joven): pulso 60-100, respiración 12-20, presión 90-120, oxígeno 95-100";
-        }
-        if (age < 45) {
-            return age + " años: pulso 60-100, respiración 12-20, presión 95-130, oxígeno 95-100";
-        }
-        if (age < 60) {
-            return age + " años: pulso 60-95, respiración 12-20, presión 100-135, oxígeno 95-100";
-        }
-        if (age < 70) {
-            return age + " años: pulso 60-90, respiración 12-22, presión 100-145, oxígeno 95-100";
-        }
-        return age + " años (adulto mayor): pulso 55-90, respiración 12-22, presión 100-150, oxígeno 95-100";
+        return base + ". EMBARAZADA: el pulso en reposo suele ir 10-20 más alto (hacia 80-110); respiración 14-22; oxígeno sigue 95-100; presión NO debe llegar a 140/90 (eso es preeclampsia, no lo normal).";
     }
 }
