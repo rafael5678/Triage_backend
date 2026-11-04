@@ -219,7 +219,7 @@ public class TriageService {
         return Math.min(100, Math.max(0, value));
     }
 
-    /** 78 crítica, 62 alta, 42 media, 22 baja. El número del catálogo manda la banda, no un 38% diluido. */
+    /** 78 crítica, 62 alta, 42 media. Motivos leves no fuerzan banda: el resto del caso manda. */
     static int esiFloor(int conditionSeverity) {
         if (conditionSeverity >= 78) {
             return 78;
@@ -229,9 +229,6 @@ public class TriageService {
         }
         if (conditionSeverity >= 42) {
             return 42;
-        }
-        if (conditionSeverity >= 22) {
-            return 22;
         }
         return 0;
     }
