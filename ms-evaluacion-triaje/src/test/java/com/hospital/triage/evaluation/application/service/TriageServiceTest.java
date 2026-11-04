@@ -45,14 +45,14 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-04: Varios signos malos suben el protocolo; no se marca crítica solo por un número")
+    @DisplayName("TC-04: Oxígeno 84 medido en un adulto ya es crítica, aunque el motivo sea una herida chica")
     void tc04_seguridadSignosVitalesExtremos() {
         TriageService.RiskResult result = triageService.calculate(
                 30, 155, 84, 75, 50, BigDecimal.valueOf(37.0), 7, "cura", ""
         );
 
-        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
-        assertThat(result.score()).isLessThan(BigDecimal.valueOf(86.0));
+        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
+        assertThat(result.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
     }
 
     @Test
