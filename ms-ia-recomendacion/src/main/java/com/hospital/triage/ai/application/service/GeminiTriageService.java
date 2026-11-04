@@ -85,10 +85,11 @@ public class GeminiTriageService {
                 El pulso se acepta alto si lo midieron; contrástalo con el rango de la edad (en una niña de 9 años 70-120 en reposo).
                 Si hay sudor, piel húmeda, mucosas secas o herida húmeda en el relato o la foto, úsalo.
                 No le pidas al usuario la causa: tú das hipótesis clínicas (por ejemplo cefalea tensional vs alarma) según relato + signos + foto.
-                Un solo número raro no basta para crítica. Varios graves a la vez, o emergencia en foto/relato con signos malos, sí.
                 Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar.
-                El score del protocolo (%s) es una base, no un techo: si el conjunto es grave, 78-100; si es leve (dolor de cabeza con signos de reposo y foto sin alarma), quédate cerca de esa base (mínima o baja).
-                Gravedad de ESTE motivo en el catálogo del hospital: %s. Si es >=62 (Alta) o >=78 (Crítica), no bajes de esa banda.
+                Signos MEDIDOS de emergencia (uno solo ya basta): SpO2 <=85 → 86-100; SpO2 70 es reanimación aunque el motivo sea un dedo. FC <40 → 86-100. Temp <=35 → mínimo 78. PAS <90 → mínimo 62. Varios a la vez → 90-100.
+                NUNCA copies el score del protocolo si los signos medidos están peores. Un SpO2 70 y una FC 39 NO pueden quedar en 78.
+                El score del protocolo (%s) es una base, no un techo: si los signos medidos empeoran, SUBE. Si todo medido está en rango y solo hay una herida local, no inventes shock.
+                Gravedad de ESTE motivo en el catálogo del hospital: %s. Eso es el piso del motivo, no el techo: los signos medidos graves suben de ahí.
                 No inventes reanimación por un dolor de cabeza o un vómito con signos de reposo.
 
                 JSON:

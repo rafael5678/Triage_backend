@@ -230,14 +230,20 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-23: El protocolo junta motivo y signos; no pone crítica solo porque un dato esté bajo")
-    void tc23_estimadoNoTapaCriticoMedido() {
-        TriageService.RiskResult result = triageService.calculate(
-                17, 38, 63, 82, 74, BigDecimal.valueOf(34.3), 16, "hemorragia", "",
-                null, null, null, false, null, java.util.List.of("diastolic", "respiratoryRate")
+    @DisplayName("TC-23: Oxígeno 70 y pulso 39 medidos suben de crítica de catálogo; no se quedan en 78")
+    void tc23_hipoxiaYBradicardiaSuperanPisoCatalogo() {
+        TriageService withCatalog = new TriageService(id -> Optional.of(78));
+        TriageService.RiskResult stable = withCatalog.calculate(
+                20, 84, 98, 116, 74, BigDecimal.valueOf(36.6), 19, "piel", "",
+                null, null, "A", true, 2, java.util.List.of("systolic", "diastolic", "respiratoryRate")
         );
-        assertThat(result.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
-        assertThat(result.score()).isLessThan(BigDecimal.valueOf(86.0));
+        TriageService.RiskResult crash = withCatalog.calculate(
+                20, 39, 70, 116, 74, BigDecimal.valueOf(35.2), 19, "piel", "",
+                null, null, "A", true, 2, java.util.List.of("systolic", "diastolic", "respiratoryRate")
+        );
+        assertThat(stable.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(78.0));
+        assertThat(crash.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(86.0));
+        assertThat(crash.score()).isGreaterThan(stable.score());
     }
 
     @Test

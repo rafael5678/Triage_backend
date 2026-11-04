@@ -118,9 +118,15 @@ public class TriageService {
         if (band != null && band.extreme(heartRate, respiratoryRate, systolic)) {
             score = Math.max(score, 86);
         }
-        // Una herida chica no puede dejar el caso en "mínima" si el pulso o la presión ya están mal.
-        if (!estimated.contains("heartRate") && heartRate > 0 && heartRate < 50) {
-            score = Math.max(score, 62);
+        // Signos MEDIDOS de emergencia suben el piso aunque el motivo del catálogo ya esté en 78.
+        if (!estimated.contains("heartRate") && heartRate > 0 && band == null) {
+            if (heartRate < 40) {
+                score = Math.max(score, 86);
+            } else if (heartRate < 45) {
+                score = Math.max(score, 78);
+            } else if (heartRate < 50) {
+                score = Math.max(score, 62);
+            }
         }
         if ((!estimated.contains("systolic") && systolic >= 180)
                 || (!estimated.contains("diastolic") && diastolic >= 120)) {
@@ -138,12 +144,24 @@ public class TriageService {
         }
         AgeNorms norms = AgeNorms.of(age, pregnant);
         if (!estimated.contains("spo2")) {
-            if (spo2Score <= 89) {
-                score = Math.max(score, 62);
+            if (spo2Score <= 85) {
+                score = Math.max(score, 86);
+            } else if (spo2Score <= 89) {
+                score = Math.max(score, 78);
             } else if (spo2Score <= 91) {
-                score = Math.max(score, 42);
+                score = Math.max(score, 62);
             } else if (spo2Score < 95) {
                 score = Math.max(score, 22);
+            }
+        }
+        if (!estimated.contains("temperature") && temperature != null) {
+            double t = temperature.doubleValue();
+            if (t <= 34.0) {
+                score = Math.max(score, 86);
+            } else if (t <= 35.0) {
+                score = Math.max(score, 78);
+            } else if (t <= 35.5) {
+                score = Math.max(score, 42);
             }
         }
         if (!estimated.contains("heartRate") && norms.hrOff(heartRate)) {
