@@ -20,6 +20,9 @@ spring:
               - "http://localhost:5173"
               - "http://localhost:3000"
               - "https://clasificador-predictivo-e.vercel.app"
+              - "https://triaje.rafael-hospy-ecoscan.xyz"
+              - "https://rafael-hospy-ecoscan.xyz"
+              - "https://www.rafael-hospy-ecoscan.xyz"
               - "${CORS_EXTRA_ORIGIN:http://localhost:5173}"
             allowedMethods:
               - GET
