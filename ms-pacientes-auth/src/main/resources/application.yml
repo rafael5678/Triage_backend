@@ -21,7 +21,7 @@ server:
 
 app:
   cors:
-    origins: ${CORS_ORIGINS:http://localhost:5173}
+    origins: ${CORS_ORIGINS:http://localhost:5173,https://clasificador-predictivo-e.vercel.app,https://triaje.rafael-hospy-ecoscan.xyz,https://rafael-hospy-ecoscan.xyz,https://www.rafael-hospy-ecoscan.xyz}
   bootstrap:
     admin-username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:UrgenciasAdmin26}
