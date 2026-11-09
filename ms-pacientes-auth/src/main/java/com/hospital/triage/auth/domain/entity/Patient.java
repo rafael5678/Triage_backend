@@ -1,3 +1,4 @@
+/** Patient: application type for the triage hospital services. */
 package com.hospital.triage.auth.domain.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
