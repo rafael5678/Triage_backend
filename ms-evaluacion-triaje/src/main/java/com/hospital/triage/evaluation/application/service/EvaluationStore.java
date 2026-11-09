@@ -25,8 +25,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Cada medición crea una evaluación nueva; la anterior deja de ser vigente y queda como historial.
- * La cola y las estadísticas solo leen evaluaciones vigentes.
+ * Each measurement creates a new evaluation; the previous row is no longer current and remains as history.
+ * The queue and statistics read current evaluations only.
  */
 @Service
 @RequiredArgsConstructor
@@ -88,8 +88,8 @@ public class EvaluationStore {
     }
 
     /**
-     * Si sigue en la misma visita (en espera o en atención) conserva estado, presencia y aviso;
-     * si la visita anterior ya terminó, empieza una nueva en espera.
+     * If this is the same visit (waiting or in care), keep status, presence and notice;
+     * if the previous visit already ended, start a new waiting visit.
      */
     static void carryOver(TriageEvaluation old, TriageEvaluation next) {
         old.setCurrent(false);
@@ -123,7 +123,7 @@ public class EvaluationStore {
         return toClinical(uniqueLatest(evaluations.findByCurrentTrueOrderByEvaluatedAtDesc()));
     }
 
-    /** Todas las evaluaciones del paciente, de la más antigua a la más reciente. */
+    /** All evaluations for the patient, oldest to newest. */
     @Transactional(readOnly = true)
     public List<RankedPatientDTO> history(UUID patientId) {
         return toClinical(evaluations.findByPatientIdOrderByEvaluatedAtAsc(patientId));
@@ -164,7 +164,7 @@ public class EvaluationStore {
         }
     }
 
-    /** Una sola fila vigente por persona: si hubo doble clic, se queda la más reciente. */
+    /** One current row per person: if there was a double click, keep the newest. */
     static List<TriageEvaluation> uniqueLatest(List<TriageEvaluation> rows) {
         Map<UUID, TriageEvaluation> latest = new LinkedHashMap<>();
         for (TriageEvaluation row : rows) {
