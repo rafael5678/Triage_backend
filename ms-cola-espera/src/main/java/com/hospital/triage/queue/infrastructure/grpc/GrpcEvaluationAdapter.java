@@ -1,3 +1,4 @@
+/** GrpcEvaluationAdapter: application type for the triage hospital services. */
 package com.hospital.triage.queue.infrastructure.grpc;
 
 import com.hospital.triage.common.dto.RankedPatientDTO;
