@@ -1,3 +1,4 @@
+/** VitalSigns: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.domain.entity;
 
 import jakarta.persistence.Column;
