@@ -1,6 +1,6 @@
 package com.hospital.triage.evaluation.application.service;
 
-/** Rangos de reposo según la edad. Un pulso de 140 es normal en un bebé, no a los 20 años. */
+/** Rangos de reposo according to la edad. Un pulso de 140 es normal en un bebé, no a los 20 años. */
 record AgeNorms(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin, int sbpMax) {
 
     static AgeNorms of(int age) {
