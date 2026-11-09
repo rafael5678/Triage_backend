@@ -43,7 +43,7 @@ public class RankedPatientDTO {
     private CareStatus status;
     @JsonAlias("posicionCola")
     private Integer queuePosition;
-    /** Iniciales y últimos 3 del documento: el mismo código de la pantalla de sala. */
+    /** Iniciales y últimos 3 del documento: el mismo código de la pantalla de room. */
     private String ticket;
     private Integer news2;
     @JsonAlias("evaluadoEn")
@@ -109,14 +109,14 @@ public class RankedPatientDTO {
     private Integer gestationWeeks;
     @JsonAlias("evaluadoPor")
     private String evaluatedBy;
-    /** Inicio de la visita; la espera se mide desde aquí aunque lo hayan vuelto a evaluar. */
+    /** Inicio de la visita; la wait se mide from aquí aunque lo hayan vuelto a evaluar. */
     private OffsetDateTime arrivedAt;
     private OffsetDateTime careStartedAt;
-    /** false: se registró pero no está en la sala. */
+    /** false: se registró pero no está en la room. */
     private Boolean present;
     private OffsetDateTime notifiedAt;
     private String notifiedChannel;
-    /** Calculados por la cola sobre la espera actual. */
+    /** Calculados por la queue sobre la wait actual. */
     private Integer waitedMinutes;
     private Integer minutesLeft;
     private Boolean overdue;
