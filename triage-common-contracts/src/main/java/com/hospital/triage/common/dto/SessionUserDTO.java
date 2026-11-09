@@ -1,3 +1,4 @@
+/** SessionUserDTO: application type for the triage hospital services. */
 package com.hospital.triage.common.dto;
 
 import com.hospital.triage.common.enums.UserRole;
