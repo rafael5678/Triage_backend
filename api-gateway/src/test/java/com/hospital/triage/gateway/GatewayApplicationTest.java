@@ -1,3 +1,4 @@
+/** GatewayApplicationTest: application type for the triage hospital services. */
 package com.hospital.triage.gateway;
 
 import org.junit.jupiter.api.DisplayName;
