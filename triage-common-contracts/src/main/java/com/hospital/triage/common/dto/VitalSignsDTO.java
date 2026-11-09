@@ -82,4 +82,7 @@ public class VitalSignsDTO implements ExtraFindings {
 
     /** false si la persona se registró pero todavía no está en la sala. */
     private Boolean present;
+
+    /** true: confirmar ingreso nuevo a la cola, aunque esa persona ya estuviera en atención. */
+    private Boolean newVisit;
 }

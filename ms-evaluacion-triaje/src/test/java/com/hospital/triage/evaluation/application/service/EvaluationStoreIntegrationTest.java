@@ -150,4 +150,25 @@ class EvaluationStoreIntegrationTest {
         assertThat(newVisit.getStatus()).isEqualTo(CareStatus.EN_ESPERA);
         assertThat(newVisit.getCareStartedAt()).isNull();
     }
+
+    @Test
+    @DisplayName("IT-04: Confirmar de nuevo (newVisit) saca a la persona de atención y la vuelve a poner en espera")
+    void it04_confirmarIngresoAunqueSigaEnAtencion() {
+        PatientSnapshot p = patient();
+        store.save(p, vitals(p.id(), 100, "A"), risk(88), AiAssistDTO.builder().active(false).build(), destination());
+        store.updateStatus(p.id(), CareStatus.EN_ATENCION);
+
+        VitalSignsDTO again = vitals(p.id(), 92, "B");
+        again.setNewVisit(true);
+        RankedPatientDTO queued = store.save(p, again, risk(97), AiAssistDTO.builder().active(false).build(), destination());
+
+        assertThat(queued.getStatus()).isEqualTo(CareStatus.EN_ESPERA);
+        assertThat(queued.getCareStartedAt()).isNull();
+        assertThat(store.loadByStatus(CareStatus.EN_ESPERA))
+                .filteredOn(r -> p.id().equals(r.getPatientId()))
+                .hasSize(1);
+        assertThat(store.loadByStatus(CareStatus.EN_ATENCION))
+                .filteredOn(r -> p.id().equals(r.getPatientId()))
+                .isEmpty();
+    }
 }

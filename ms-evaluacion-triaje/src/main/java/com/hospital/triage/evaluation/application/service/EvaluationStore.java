@@ -57,7 +57,10 @@ public class EvaluationStore {
         List<TriageEvaluation> open = evaluations.findByPatientIdAndCurrentTrue(patient.id());
         Optional<TriageEvaluation> previous = open.stream()
                 .max(Comparator.comparing(TriageEvaluation::getEvaluatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
-        previous.ifPresent(old -> carryOver(old, evaluation));
+        boolean newVisit = Boolean.TRUE.equals(dto.getNewVisit());
+        if (!newVisit) {
+            previous.ifPresent(old -> carryOver(old, evaluation));
+        }
         open.forEach(old -> old.setCurrent(false));
         if (dto.getPresent() != null) {
             evaluation.setPresent(dto.getPresent());
