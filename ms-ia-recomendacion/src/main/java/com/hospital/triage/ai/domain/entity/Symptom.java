@@ -1,3 +1,4 @@
+/** Symptom: application type for the triage hospital services. */
 package com.hospital.triage.ai.domain.entity;
 
 import jakarta.persistence.Column;
