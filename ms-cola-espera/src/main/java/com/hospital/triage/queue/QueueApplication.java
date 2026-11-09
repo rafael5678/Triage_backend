@@ -1,3 +1,4 @@
+/** QueueApplication: application type for the triage hospital services. */
 package com.hospital.triage.queue;
 
 import org.springframework.boot.SpringApplication;
