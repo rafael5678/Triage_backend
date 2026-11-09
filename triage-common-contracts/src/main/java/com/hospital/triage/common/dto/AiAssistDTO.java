@@ -1,3 +1,4 @@
+/** AiAssistDTO: application type for the triage hospital services. */
 package com.hospital.triage.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
