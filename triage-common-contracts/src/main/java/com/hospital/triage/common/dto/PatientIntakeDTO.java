@@ -49,7 +49,7 @@ public class PatientIntakeDTO {
     @JsonAlias("antecedentes")
     private String history;
 
-    /** Celular para avisarle por WhatsApp cuando se acerque su turno. */
+    /** mobile para avisarle por WhatsApp when se acerque su shift. */
     @Size(max = 20)
     @jakarta.validation.constraints.Pattern(regexp = "^[0-9+ ()-]*$")
     @JsonAlias("telefono")
