@@ -5,7 +5,7 @@ import lombok.Builder;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Lo que evaluación le manda a la IA por gRPC. photoBase64 puede venir como data URL. */
+/** Lo que evaluation le manda a la IA por gRPC. photoBase64 puede venir como data URL. */
 @Builder
 public record AssistInput(
         String conditionId,
