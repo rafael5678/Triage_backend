@@ -1,3 +1,4 @@
+/** EvaluationStoreIntegrationTest: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
