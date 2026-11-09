@@ -14,10 +14,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
- * Eventos en vivo (SSE) para la sala del personal y la pantalla pública.
- * Mientras haya alguien conectado revisa la cola cada 5 segundos; si cambió, avisa con un evento
+ * Live SSE events for the staff waiting room and the public board.
+ * Mientras haya alguien conectado revisa la queue cada 5 segundos; si cambió, avisa con un evento
  * "cambio" y cada pantalla vuelve a pedir sus datos. El evento no lleva datos de pacientes.
- * Esa misma revisión dispara los avisos de WhatsApp, así funcionan mientras la sala esté abierta
+ * Esa misma revisión dispara los notices de WhatsApp, así funcionan mientras la room esté abierta
  * aunque el servicio se duerma cuando nadie lo usa.
  */
 @Slf4j
@@ -52,7 +52,7 @@ public class QueueEvents {
         return emitters.size();
     }
 
-    /** Llamado tras un cambio hecho por la propia cola (pasar a atención, presencia, aviso). */
+    /** Llamado tras un cambio hecho por la propia queue (pasar a care, presence, notice). */
     public void changed() {
         lastDigest = "";
         broadcast("cambio");
