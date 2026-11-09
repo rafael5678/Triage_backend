@@ -3,7 +3,9 @@ package com.hospital.triage.evaluation.application.service;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.dto.AnalyzeTriageDTO;
 import com.hospital.triage.common.dto.ExtraFindings;
+import com.hospital.triage.common.TriageStatsCalculator;
 import com.hospital.triage.common.dto.RankedPatientDTO;
+import com.hospital.triage.common.dto.TriageStatsDTO;
 import com.hospital.triage.common.dto.ReassessmentDTO;
 import com.hospital.triage.common.dto.VitalSignsDTO;
 import com.hospital.triage.common.enums.CareStatus;
@@ -113,6 +115,10 @@ public class EvaluationService {
 
     public List<RankedPatientDTO> listAll() {
         return enrich(store.loadAll());
+    }
+
+    public TriageStatsDTO stats() {
+        return TriageStatsCalculator.from(store.loadAll(), OffsetDateTime.now());
     }
 
     public RankedPatientDTO updateStatus(UUID patientId, CareStatus status) {

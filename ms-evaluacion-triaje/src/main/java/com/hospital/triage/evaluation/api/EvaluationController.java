@@ -2,6 +2,7 @@ package com.hospital.triage.evaluation.api;
 
 import com.hospital.triage.common.dto.AnalyzeTriageDTO;
 import com.hospital.triage.common.dto.RankedPatientDTO;
+import com.hospital.triage.common.dto.TriageStatsDTO;
 import com.hospital.triage.common.dto.ReassessmentDTO;
 import com.hospital.triage.common.dto.VitalSignsDTO;
 import com.hospital.triage.evaluation.application.service.EvaluationService;
@@ -41,6 +42,11 @@ public class EvaluationController {
     @PostMapping({"/analyze", "/analizar"})
     public RankedPatientDTO analyze(@Valid @RequestBody AnalyzeTriageDTO dto) {
         return evaluationService.analyze(dto);
+    }
+
+    @GetMapping({"/evaluations/stats", "/evaluaciones/estadisticas"})
+    public TriageStatsDTO stats() {
+        return evaluationService.stats();
     }
 
     @PostMapping({"/evaluations", "/evaluaciones"})
