@@ -1,3 +1,4 @@
+/** PatientRepository: application type for the triage hospital services. */
 package com.hospital.triage.auth.infrastructure.persistence;
 
 import com.hospital.triage.auth.domain.entity.Patient;
