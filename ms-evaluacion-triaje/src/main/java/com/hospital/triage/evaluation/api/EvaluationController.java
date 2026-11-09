@@ -28,7 +28,7 @@ public class EvaluationController {
 
     private final EvaluationService evaluationService;
 
-    @GetMapping({"/health", "/salud"})
+    @GetMapping({"/health", "/salud", "/evaluations/health", "/evaluaciones/salud"})
     public Map<String, String> health() {
         return Map.of(
                 "status", "ok",

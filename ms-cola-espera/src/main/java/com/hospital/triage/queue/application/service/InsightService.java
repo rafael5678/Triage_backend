@@ -31,9 +31,24 @@ public class InsightService {
     private static final int MINUTES_PER_PATIENT_AHEAD = 8;
 
     private final EvaluationPort evaluations;
+    private volatile TriageStatsDTO cachedStats;
+    private volatile long cachedStatsAt;
 
     public TriageStatsDTO stats() {
-        return stats(evaluations.listAll(), OffsetDateTime.now());
+        long now = System.currentTimeMillis();
+        TriageStatsDTO hit = cachedStats;
+        if (hit != null && now - cachedStatsAt < 8_000) {
+            return hit;
+        }
+        synchronized (this) {
+            if (cachedStats != null && System.currentTimeMillis() - cachedStatsAt < 8_000) {
+                return cachedStats;
+            }
+            TriageStatsDTO fresh = stats(evaluations.listAll(), OffsetDateTime.now());
+            cachedStats = fresh;
+            cachedStatsAt = System.currentTimeMillis();
+            return fresh;
+        }
     }
 
     TriageStatsDTO stats(List<RankedPatientDTO> all, OffsetDateTime now) {
