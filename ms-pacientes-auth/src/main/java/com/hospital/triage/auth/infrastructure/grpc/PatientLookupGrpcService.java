@@ -1,3 +1,4 @@
+/** PatientLookupGrpcService: application type for the triage hospital services. */
 package com.hospital.triage.auth.infrastructure.grpc;
 
 import com.hospital.triage.auth.application.service.PatientService;
