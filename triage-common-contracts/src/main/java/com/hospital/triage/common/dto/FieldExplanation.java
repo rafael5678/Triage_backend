@@ -1,3 +1,4 @@
+/** FieldExplanation: application type for the triage hospital services. */
 package com.hospital.triage.common.dto;
 
 import lombok.AllArgsConstructor;
