@@ -1,3 +1,4 @@
+/** GlobalExceptionHandler: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.api;
 
 import com.hospital.triage.common.exception.InvalidVitalSignsException;
