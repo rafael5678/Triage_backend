@@ -43,7 +43,7 @@ public class TriageService {
             Map.entry("cura", 8)
     );
 
-    /** Motivos que sí pueden forzar banda alta/crítica aunque los signos aún se vean estables. */
+    /** Motivos que sí pueden forzar banda alta/crítica aunque los vitals aún se vean estables. */
     private static final Set<String> EMERGENCY_MOTIFS = Set.of(
             "paro", "avc", "sca", "trauma", "disnea", "sepsis", "anafilaxia", "hemorragia", "convulsion"
     );
@@ -58,7 +58,7 @@ public class TriageService {
 
     /**
      * glucose en mg/dL, painScale 0-10 y consciousness en AVPU son opcionales.
-     * Solo pueden subir el puntaje: un dato ausente no resta.
+     * Solo pueden subir el score: un dato ausente no resta.
      */
     public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
                                 int respiratoryRate, String conditionId, String history,
@@ -68,8 +68,8 @@ public class TriageService {
     }
 
     /**
-     * Menores de 16 años: NEWS2 solo está validado en adultos, así que los signos se puntúan contra los
-     * rangos normales de su edad (al estilo PEWS) y los pisos de emergencia también son pediátricos.
+     * Menores de 16 años: NEWS2 solo está validado en adultos, así que los vitals se puntúan contra los
+     * rangos normales de su edad (al estilo PEWS) y los pisos de emergencia also son pediátricos.
      * Embarazo: la presión alta y los motivos obstétricos de riesgo suben el piso.
      */
     public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
