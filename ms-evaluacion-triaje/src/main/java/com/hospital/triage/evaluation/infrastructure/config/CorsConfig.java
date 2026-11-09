@@ -1,3 +1,4 @@
+/** CorsConfig: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.infrastructure.config;
 
 import org.springframework.beans.factory.annotation.Value;
