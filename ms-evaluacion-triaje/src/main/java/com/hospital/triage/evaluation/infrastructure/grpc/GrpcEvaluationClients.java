@@ -1,3 +1,4 @@
+/** GrpcEvaluationClients: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.infrastructure.grpc;
 
 import com.hospital.triage.common.dto.AiAssistDTO;
