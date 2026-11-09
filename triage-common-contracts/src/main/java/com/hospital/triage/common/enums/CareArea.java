@@ -1,6 +1,6 @@
 package com.hospital.triage.common.enums;
 
-/** Área de urgencias a la que se envía al paciente, de la más a la menos urgente. */
+/** Área de urgencias a la que se envía al patient, de la más a la menos urgente. */
 public enum CareArea {
     REANIMACION("Reanimación (sala de choque)", 0),
     URGENCIAS_CRITICAS("Urgencias críticas y observación", 10),
