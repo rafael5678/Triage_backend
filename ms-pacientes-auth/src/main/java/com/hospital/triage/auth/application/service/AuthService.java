@@ -34,12 +34,20 @@ public class AuthService {
 
     @Transactional
     public SessionUserDTO createUser(CreateUserRequest request) {
-        if (users.existsByUsernameIgnoreCase(request.getUsername().trim())) {
+        String username = request.getUsername().trim();
+        String password = request.getPassword();
+        if (username.contains(" ") || username.length() < 3 || username.length() > 32) {
+            throw new IllegalArgumentException("Username must be 3 to 32 characters without spaces");
+        }
+        if (password.contains(" ") || password.length() < 8 || password.length() > 12) {
+            throw new IllegalArgumentException("Password must be 8 to 12 characters without spaces");
+        }
+        if (users.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("That username already exists");
         }
         AppUser user = new AppUser();
-        user.setUsername(request.getUsername().trim());
-        user.setPasswordHash(encoder.encode(request.getPassword()));
+        user.setUsername(username);
+        user.setPasswordHash(encoder.encode(password));
         user.setDisplayName(request.getDisplayName().trim());
         user.setRole(request.getRole());
         user.setActive(true);
@@ -68,8 +76,8 @@ public class AuthService {
         }
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             String password = request.getPassword();
-            if (password.contains(" ") || password.length() < 8 || password.length() > 64) {
-                throw new IllegalArgumentException("Password must be 8 to 64 characters without spaces");
+            if (password.contains(" ") || password.length() < 8 || password.length() > 12) {
+                throw new IllegalArgumentException("Password must be 8 to 12 characters without spaces");
             }
             user.setPasswordHash(encoder.encode(password));
         }
