@@ -1,3 +1,4 @@
+# English: runtime config. Do not rename Spanish database columns.
 spring:
   application:
     name: ms-ia-recomendacion
