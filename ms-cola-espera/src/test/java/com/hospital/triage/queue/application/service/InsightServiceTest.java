@@ -1,3 +1,4 @@
+/** InsightServiceTest: application type for the triage hospital services. */
 package com.hospital.triage.queue.application.service;
 
 import com.hospital.triage.common.dto.BoardEntryDTO;
