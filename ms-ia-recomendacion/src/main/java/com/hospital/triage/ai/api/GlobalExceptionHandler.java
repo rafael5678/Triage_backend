@@ -1,3 +1,4 @@
+/** GlobalExceptionHandler: application type for the triage hospital services. */
 package com.hospital.triage.ai.api;
 
 import org.springframework.http.HttpStatus;
