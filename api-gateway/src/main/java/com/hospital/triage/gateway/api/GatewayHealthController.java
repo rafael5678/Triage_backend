@@ -1,3 +1,4 @@
+/** GatewayHealthController: application type for the triage hospital services. */
 package com.hospital.triage.gateway.api;
 
 import org.springframework.http.ResponseEntity;
