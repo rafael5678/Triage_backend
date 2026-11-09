@@ -33,6 +33,8 @@ public class QueueService {
                     Comparator.nullsLast(Comparator.naturalOrder()));
 
     private final EvaluationPort evaluations;
+    private volatile List<RankedPatientDTO> cachedAll;
+    private volatile long cachedAllAt;
 
     public QueueStateDTO queue() {
         List<RankedPatientDTO> list = ranked(CareStatus.EN_ESPERA);
@@ -44,15 +46,27 @@ public class QueueService {
     }
 
     public List<RankedPatientDTO> all() {
-        OffsetDateTime now = OffsetDateTime.now();
-        List<RankedPatientDTO> rows = evaluations.listAll();
-        rows.forEach(p -> {
-            p.setTicket(TurnTicket.of(p.getName(), p.getDocument()));
-            if (p.getStatus() == CareStatus.EN_ESPERA) {
-                WaitClock.stamp(p, now);
+        long nowMs = System.currentTimeMillis();
+        List<RankedPatientDTO> hit = cachedAll;
+        if (hit != null && nowMs - cachedAllAt < 4_000) {
+            return hit;
+        }
+        synchronized (this) {
+            if (cachedAll != null && System.currentTimeMillis() - cachedAllAt < 4_000) {
+                return cachedAll;
             }
-        });
-        return rows;
+            OffsetDateTime now = OffsetDateTime.now();
+            List<RankedPatientDTO> rows = evaluations.listAll();
+            rows.forEach(p -> {
+                p.setTicket(TurnTicket.of(p.getName(), p.getDocument()));
+                if (p.getStatus() == CareStatus.EN_ESPERA) {
+                    WaitClock.stamp(p, now);
+                }
+            });
+            cachedAll = List.copyOf(rows);
+            cachedAllAt = System.currentTimeMillis();
+            return cachedAll;
+        }
     }
 
     public RankedPatientDTO startCare(UUID patientId) {
@@ -60,6 +74,7 @@ public class QueueService {
     }
 
     public RankedPatientDTO updateStatus(UUID patientId, CareStatus newStatus) {
+        cachedAll = null;
         RankedPatientDTO updated = evaluations.updateStatus(patientId, newStatus);
         try {
             ranked(CareStatus.EN_ESPERA);
@@ -70,10 +85,12 @@ public class QueueService {
     }
 
     public RankedPatientDTO setPresence(UUID patientId, boolean present) {
+        cachedAll = null;
         return evaluations.setPresence(patientId, present);
     }
 
     public RankedPatientDTO markNotified(UUID patientId, String channel) {
+        cachedAll = null;
         return evaluations.markNotified(patientId, channel);
     }
 
