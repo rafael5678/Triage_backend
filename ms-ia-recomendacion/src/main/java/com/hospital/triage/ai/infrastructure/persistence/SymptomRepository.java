@@ -1,3 +1,4 @@
+/** SymptomRepository: application type for the triage hospital services. */
 package com.hospital.triage.ai.infrastructure.persistence;
 
 import com.hospital.triage.ai.domain.entity.Symptom;
