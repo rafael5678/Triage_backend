@@ -1,7 +1,7 @@
 package com.hospital.triage.common;
 
 /**
- * Turno de sala: iniciales (máximo 2) y los últimos 3 del documento.
+ * shift de room: iniciales (máximo 2) y los últimos 3 del documento.
  * No identifica a la persona en la pantalla pública.
  */
 public final class TurnTicket {
