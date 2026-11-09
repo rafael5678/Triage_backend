@@ -1,3 +1,4 @@
+/** AuthService: application type for the triage hospital services. */
 package com.hospital.triage.auth.application.service;
 
 import com.hospital.triage.auth.domain.entity.AppUser;
