@@ -1,3 +1,4 @@
+/** DataBootstrap: application type for the triage hospital services. */
 package com.hospital.triage.auth.infrastructure.config;
 
 import com.hospital.triage.auth.domain.entity.AppUser;
