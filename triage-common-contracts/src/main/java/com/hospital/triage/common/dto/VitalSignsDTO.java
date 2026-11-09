@@ -76,13 +76,13 @@ public class VitalSignsDTO implements ExtraFindings {
     @Builder.Default
     private List<String> estimatedFields = new ArrayList<>();
 
-    /** Quién tomó los signos (nombre de la sesión del personal). */
+    /** Who took the vitals (staff session display name). */
     @Size(max = 120)
     private String evaluatedBy;
 
-    /** false si la persona se registró pero todavía no está en la sala. */
+    /** false if the person was registered but is not in the waiting room yet. */
     private Boolean present;
 
-    /** true: confirmar ingreso nuevo a la cola, aunque esa persona ya estuviera en atención. */
+    /** true: confirm a new waiting-room visit even if that person was already in care. */
     private Boolean newVisit;
 }
