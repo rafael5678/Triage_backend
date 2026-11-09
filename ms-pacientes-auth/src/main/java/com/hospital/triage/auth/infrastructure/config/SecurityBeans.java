@@ -1,3 +1,4 @@
+/** SecurityBeans: application type for the triage hospital services. */
 package com.hospital.triage.auth.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
