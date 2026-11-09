@@ -1,8 +1,8 @@
 package com.hospital.triage.common;
 
 /**
- * Cédula o TI colombiana: solo dígitos, de 5 a 10 (NUIP llega a 10).
- * No consulta a la Registraduría: evita cédulas de 20 números.
+ * document o TI colombiana: solo dígitos, de 5 a 10 (NUIP llega a 10).
+ * No consulta a la Registraduría: evita documents de 20 números.
  */
 public final class ColombianId {
 
