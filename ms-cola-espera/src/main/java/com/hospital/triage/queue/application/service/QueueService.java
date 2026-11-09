@@ -21,9 +21,9 @@ import java.util.UUID;
 public class QueueService {
 
     /**
-     * Primero el más grave (nivel de triaje, luego puntaje).
-     * Si el nivel es el mismo, pasa quien tiene 65 años o más.
-     * Si aún empatan, quien llegó antes.
+     * Most severe first (triage level, then score).
+     * If the level is the same, people aged 65 or more go first.
+     * If still tied, whoever arrived earlier.
      */
     static final Comparator<RankedPatientDTO> PRIORITY = Comparator
             .comparing((RankedPatientDTO p) -> p.getTriageLevel() == null ? Integer.MAX_VALUE : p.getTriageLevel().ordinal())
