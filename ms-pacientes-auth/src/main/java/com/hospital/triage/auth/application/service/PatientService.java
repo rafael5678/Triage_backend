@@ -44,7 +44,7 @@ public class PatientService {
         return patients.save(p);
     }
 
-    /** Deja el celular en formato 57 + 10 dígitos, o null. Rechaza números inventados. */
+    /** Stores the mobile as 57 + 10 digits, or null. Rejects made-up numbers. */
     static String normalizePhone(String raw) {
         return ColombianMobile.normalize(raw);
     }
