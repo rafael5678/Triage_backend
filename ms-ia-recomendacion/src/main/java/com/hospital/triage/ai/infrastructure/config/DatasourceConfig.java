@@ -1,3 +1,4 @@
+/** DatasourceConfig: application type for the triage hospital services. */
 package com.hospital.triage.ai.infrastructure.config;
 
 import com.zaxxer.hikari.HikariConfig;
