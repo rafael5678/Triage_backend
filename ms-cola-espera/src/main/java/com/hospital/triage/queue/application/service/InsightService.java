@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Estadísticas de la sala y tablero público, calculados sobre las evaluaciones que entrega evaluación por gRPC. */
+/** Waiting-room stats and public board, computed from evaluations delivered over gRPC. */
 @Service
 @RequiredArgsConstructor
 public class InsightService {
@@ -32,7 +32,7 @@ public class InsightService {
         return TriageStatsCalculator.from(all, now);
     }
 
-    /** Solo lectura: ordena en memoria y no reescribe las posiciones de la cola. */
+    /** Read-only: sort in memory and do not rewrite queue positions. */
     public List<BoardEntryDTO> board() {
         List<RankedPatientDTO> waiting = evaluations.listByStatus(CareStatus.EN_ESPERA);
         List<RankedPatientDTO> inCare = evaluations.listByStatus(CareStatus.EN_ATENCION);
@@ -73,7 +73,7 @@ public class InsightService {
                 .build();
     }
 
-    /** Turno que no identifica a la persona: iniciales y los últimos 3 caracteres del documento. */
+    /** Ticket that does not identify the person: initials and the last 3 characters of the document. */
     static String ticket(String name, String document) {
         return TurnTicket.of(name, document);
     }
