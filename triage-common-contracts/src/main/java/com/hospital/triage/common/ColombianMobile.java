@@ -1,8 +1,8 @@
 package com.hospital.triage.common;
 
 /**
- * Celular colombiano para WhatsApp: 10 dígitos que empiezan en 3 (300, 310, 318…).
- * Vacío se permite (el aviso simplemente no se manda).
+ * Colombian mobile for WhatsApp: 10 digits starting with 3 (300, 310, 318…).
+ * Empty is allowed (the notice is simply not sent).
  */
 public final class ColombianMobile {
 
