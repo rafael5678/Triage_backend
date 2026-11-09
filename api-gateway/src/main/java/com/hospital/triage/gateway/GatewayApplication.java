@@ -1,3 +1,4 @@
+/** GatewayApplication: application type for the triage hospital services. */
 package com.hospital.triage.gateway;
 
 import org.springframework.boot.SpringApplication;
