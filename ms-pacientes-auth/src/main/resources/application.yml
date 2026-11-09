@@ -25,3 +25,5 @@ app:
   bootstrap:
     admin-username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:UrgenciasAdmin26}
+  admin:
+    vault-key: ${ADMIN_VAULT_KEY:triage-admin-vault-2026}

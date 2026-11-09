@@ -44,6 +44,11 @@ public class AuthController {
         return auth.listUsers();
     }
 
+    @GetMapping("/admin/users/{id}")
+    public SessionUserDTO user(@PathVariable UUID id) {
+        return auth.getUser(id);
+    }
+
     @PostMapping("/admin/users")
     @ResponseStatus(HttpStatus.CREATED)
     public SessionUserDTO createUser(@Valid @RequestBody CreateUserRequest request) {

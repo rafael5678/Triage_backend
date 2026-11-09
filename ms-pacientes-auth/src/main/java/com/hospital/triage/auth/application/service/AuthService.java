@@ -1,6 +1,7 @@
 package com.hospital.triage.auth.application.service;
 
 import com.hospital.triage.auth.domain.entity.AppUser;
+import com.hospital.triage.auth.infrastructure.config.PasswordVault;
 import com.hospital.triage.auth.infrastructure.persistence.AppUserRepository;
 import com.hospital.triage.common.dto.CreateUserRequest;
 import com.hospital.triage.common.dto.LoginRequest;
@@ -22,12 +23,17 @@ public class AuthService {
 
     private final AppUserRepository users;
     private final PasswordEncoder encoder;
+    private final PasswordVault vault;
 
     public SessionUserDTO login(LoginRequest request) {
         AppUser user = users.findByUsernameIgnoreCase(request.getUsername().trim())
                 .orElseThrow(InvalidCredentialsException::new);
         if (!user.isActive() || !encoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
+        }
+        if (user.getPasswordVault() == null || user.getPasswordVault().isBlank()) {
+            user.setPasswordVault(vault.seal(request.getPassword()));
+            users.save(user);
         }
         return toSession(user);
     }
@@ -47,7 +53,7 @@ public class AuthService {
         }
         AppUser user = new AppUser();
         user.setUsername(username);
-        user.setPasswordHash(encoder.encode(password));
+        storePassword(user, password);
         user.setDisplayName(request.getDisplayName().trim());
         user.setRole(request.getRole());
         user.setActive(true);
@@ -57,6 +63,11 @@ public class AuthService {
 
     public List<SessionUserDTO> listUsers() {
         return users.findAll().stream().map(this::toSession).toList();
+    }
+
+    public SessionUserDTO getUser(UUID id) {
+        AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return toAdminDetail(user);
     }
 
     @Transactional
@@ -76,10 +87,13 @@ public class AuthService {
         }
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             String password = request.getPassword();
-            if (password.contains(" ") || password.length() < 8 || password.length() > 12) {
-                throw new IllegalArgumentException("Password must be 8 to 12 characters without spaces");
+            String current = vault.open(user.getPasswordVault());
+            if (!password.equals(current)) {
+                if (password.contains(" ") || password.length() < 8 || password.length() > 12) {
+                    throw new IllegalArgumentException("Password must be 8 to 12 characters without spaces");
+                }
+                storePassword(user, password);
             }
-            user.setPasswordHash(encoder.encode(password));
         }
         if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
             user.setDisplayName(request.getDisplayName().trim());
@@ -87,7 +101,8 @@ public class AuthService {
         if (request.getRole() != null) {
             user.setRole(request.getRole());
         }
-        return toSession(users.save(user));
+        users.save(user);
+        return toSession(user);
     }
 
     @Transactional
@@ -95,6 +110,11 @@ public class AuthService {
         AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(active);
         users.save(user);
+    }
+
+    private void storePassword(AppUser user, String password) {
+        user.setPasswordHash(encoder.encode(password));
+        user.setPasswordVault(vault.seal(password));
     }
 
     private SessionUserDTO toSession(AppUser user) {
@@ -105,5 +125,11 @@ public class AuthService {
                 .role(user.getRole())
                 .active(user.isActive())
                 .build();
+    }
+
+    private SessionUserDTO toAdminDetail(AppUser user) {
+        SessionUserDTO dto = toSession(user);
+        dto.setPassword(vault.open(user.getPasswordVault()));
+        return dto;
     }
 }

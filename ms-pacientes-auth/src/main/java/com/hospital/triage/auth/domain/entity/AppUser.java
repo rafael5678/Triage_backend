@@ -33,6 +33,9 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 120)
     private String passwordHash;
 
+    @Column(name = "password_vault", length = 512)
+    private String passwordVault;
+
     @Column(name = "display_name", nullable = false, length = 160)
     private String displayName;
 

@@ -19,6 +19,7 @@ public class DataBootstrap implements CommandLineRunner {
 
     private final AppUserRepository users;
     private final PasswordEncoder encoder;
+    private final PasswordVault vault;
 
     @Value("${app.bootstrap.admin-username:}")
     private String adminUsername;
@@ -31,16 +32,23 @@ public class DataBootstrap implements CommandLineRunner {
         if (adminUsername != null && !adminUsername.isBlank() && adminPassword != null && !adminPassword.isBlank()) {
             AppUser admin = users.findByUsernameIgnoreCase(adminUsername.trim()).orElseGet(AppUser::new);
             boolean created = admin.getId() == null;
-            admin.setUsername(adminUsername.trim());
-            admin.setPasswordHash(encoder.encode(adminPassword));
-            admin.setDisplayName("Administrador");
-            admin.setRole(UserRole.ADMIN);
-            admin.setActive(true);
-            if (admin.getCreatedAt() == null) {
+            if (created) {
+                admin.setUsername(adminUsername.trim());
+                admin.setPasswordHash(encoder.encode(adminPassword));
+                admin.setPasswordVault(vault.seal(adminPassword));
+                admin.setDisplayName("Administrador");
+                admin.setRole(UserRole.ADMIN);
+                admin.setActive(true);
                 admin.setCreatedAt(OffsetDateTime.now());
+                users.save(admin);
+                log.info("Admin account ready: {}", adminUsername);
+            } else if (admin.getPasswordVault() == null || admin.getPasswordVault().isBlank()) {
+                if (encoder.matches(adminPassword, admin.getPasswordHash())) {
+                    admin.setPasswordVault(vault.seal(adminPassword));
+                    users.save(admin);
+                    log.info("Admin password vault filled for {}", adminUsername);
+                }
             }
-            users.save(admin);
-            log.info(created ? "Admin account ready: {}" : "Admin account updated: {}", adminUsername);
         }
     }
 }
