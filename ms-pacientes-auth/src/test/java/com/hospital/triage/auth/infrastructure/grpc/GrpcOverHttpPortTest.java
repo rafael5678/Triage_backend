@@ -1,3 +1,4 @@
+/** GrpcOverHttpPortTest: application type for the triage hospital services. */
 package com.hospital.triage.auth.infrastructure.grpc;
 
 import com.hospital.triage.grpc.v1.PatientId;
