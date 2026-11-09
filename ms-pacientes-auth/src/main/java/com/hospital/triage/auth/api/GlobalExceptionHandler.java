@@ -1,5 +1,6 @@
 package com.hospital.triage.auth.api;
 
+import com.hospital.triage.common.exception.AccountInactiveException;
 import com.hospital.triage.common.exception.InvalidCredentialsException;
 import com.hospital.triage.common.exception.PatientNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> unauthorized(InvalidCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountInactiveException.class)
+    public ResponseEntity<Map<String, String>> disabled(AccountInactiveException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -61,11 +61,17 @@ public class AuthController {
     }
 
     @PatchMapping({"/admin/users/{id}/active", "/admin/users/{id}/activo"})
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setActive(@PathVariable UUID id,
-                          @RequestParam(value = "active", required = false) Boolean active,
-                          @RequestParam(value = "activo", required = false) Boolean activo) {
-        boolean value = active != null ? active : Boolean.TRUE.equals(activo);
-        auth.setActive(id, value);
+    public SessionUserDTO setActive(@PathVariable UUID id,
+                                    @RequestParam(value = "active", required = false) Boolean active,
+                                    @RequestParam(value = "activo", required = false) Boolean activo,
+                                    @RequestBody(required = false) UpdateUserRequest body) {
+        Boolean value = active != null ? active : activo;
+        if (value == null && body != null) {
+            value = body.getActive();
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Active flag is required");
+        }
+        return auth.setActive(id, value);
     }
 }

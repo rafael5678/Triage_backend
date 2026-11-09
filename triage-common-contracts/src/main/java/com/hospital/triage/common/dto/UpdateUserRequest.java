@@ -15,4 +15,5 @@ public class UpdateUserRequest {
     private String password;
     private String displayName;
     private UserRole role;
+    private Boolean active;
 }

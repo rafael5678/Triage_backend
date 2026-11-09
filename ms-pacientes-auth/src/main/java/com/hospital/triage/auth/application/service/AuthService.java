@@ -7,6 +7,7 @@ import com.hospital.triage.common.dto.CreateUserRequest;
 import com.hospital.triage.common.dto.LoginRequest;
 import com.hospital.triage.common.dto.SessionUserDTO;
 import com.hospital.triage.common.dto.UpdateUserRequest;
+import com.hospital.triage.common.exception.AccountInactiveException;
 import com.hospital.triage.common.exception.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,8 +29,11 @@ public class AuthService {
     public SessionUserDTO login(LoginRequest request) {
         AppUser user = users.findByUsernameIgnoreCase(request.getUsername().trim())
                 .orElseThrow(InvalidCredentialsException::new);
-        if (!user.isActive() || !encoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (!encoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
+        }
+        if (!user.isActive()) {
+            throw new AccountInactiveException();
         }
         if (user.getPasswordVault() == null || user.getPasswordVault().isBlank()) {
             user.setPasswordVault(vault.seal(request.getPassword()));
@@ -101,15 +105,18 @@ public class AuthService {
         if (request.getRole() != null) {
             user.setRole(request.getRole());
         }
+        if (request.getActive() != null) {
+            user.setActive(request.getActive());
+        }
         users.save(user);
         return toSession(user);
     }
 
     @Transactional
-    public void setActive(UUID id, boolean active) {
+    public SessionUserDTO setActive(UUID id, boolean active) {
         AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(active);
-        users.save(user);
+        return toSession(users.save(user));
     }
 
     private void storePassword(AppUser user, String password) {
