@@ -1,3 +1,4 @@
+/** TriageEvaluation: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.domain.entity;
 
 import com.hospital.triage.common.enums.CareStatus;
