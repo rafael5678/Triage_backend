@@ -1,3 +1,4 @@
+/** ClinicalAiGrpcService: application type for the triage hospital services. */
 package com.hospital.triage.ai.infrastructure.grpc;
 
 import com.hospital.triage.ai.application.service.ClinicalCase;
