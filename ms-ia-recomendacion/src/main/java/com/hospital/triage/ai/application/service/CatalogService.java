@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.time.OffsetDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -20,11 +19,11 @@ public class CatalogService {
     private final SymptomRepository symptoms;
 
     public List<Symptom> listActive() {
-        return newestFirst(symptoms.findByActiveTrueOrderBySeverityDesc());
+        return symptoms.findByActiveTrueOrderBySeverityDesc();
     }
 
     public List<Symptom> listAll() {
-        return newestFirst(symptoms.findAllByOrderBySeverityDesc());
+        return symptoms.findAllByOrderBySeverityDesc();
     }
 
     @Transactional
@@ -55,13 +54,5 @@ public class CatalogService {
         n = n.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-");
         n = n.replaceAll("(^-|-$)", "");
         return n.isBlank() ? "sintoma" : n.substring(0, Math.min(60, n.length()));
-    }
-
-    private static List<Symptom> newestFirst(List<Symptom> rows) {
-        return rows.stream()
-                .sorted(Comparator
-                        .comparing(Symptom::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(Comparator.comparingInt(Symptom::getSeverity).reversed()))
-                .toList();
     }
 }
