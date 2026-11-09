@@ -1,3 +1,4 @@
+# English: runtime config. Do not rename Spanish database columns.
 server:
   port: ${PORT:8080}
 
