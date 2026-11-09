@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Convierte el relato (y la foto) del ingreso en el formulario de triaje. */
+/** Convierte el relato (y la foto) del intake en el formulario de triaje. */
 @Service
 @RequiredArgsConstructor
 public class IntakeService {
