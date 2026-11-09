@@ -21,9 +21,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Avisa por WhatsApp a quien espera cuando su turno se acerca o su tiempo máximo está por vencerse.
- * Si la persona se registró pero no ha llegado a la sala, el mensaje le pide presentarse.
- * Cada paciente recibe un solo aviso por visita (queda marcado en evaluación).
+ * Sends WhatsApp when a waiting turn is near or the max wait is about to expire.
+ * Si la persona se registró pero no ha llegado a la room, el mensaje le pide presentarse.
+ * Cada patient recibe un solo notice por visita (queda marcado en evaluation).
  * Sin WHATSAPP_TOKEN y WHATSAPP_PHONE_ID no envía nada: el personal usa el botón de la app.
  */
 @Slf4j
@@ -48,14 +48,14 @@ public class WhatsAppNotifier {
     @Value("${app.whatsapp.phone-number-id:}")
     private String phoneNumberId;
 
-    /** Plantilla aprobada en Meta; sin ella se envía texto libre (solo llega si el paciente escribió en las últimas 24 h). */
+    /** Plantilla aprobada en Meta; sin ella se envía texto libre (solo llega si el patient escribió en las últimas 24 h). */
     @Value("${app.whatsapp.template:}")
     private String template;
 
     @Value("${app.whatsapp.template-language:es}")
     private String templateLanguage;
 
-    /** Avisar cuando falten estos minutos para el tiempo máximo… */
+    /** Avisar when falten estos minutos para el tiempo máximo… */
     @Value("${app.whatsapp.lead-minutes:10}")
     private int leadMinutes = 10;
 
@@ -72,7 +72,7 @@ public class WhatsAppNotifier {
         return token != null && !token.isBlank() && phoneNumberId != null && !phoneNumberId.isBlank();
     }
 
-    /** Lanza la revisión en segundo plano para no demorar la respuesta de la cola. */
+    /** Lanza la revisión en segundo plano para no demorar la respuesta de la queue. */
     public void checkAsync(List<RankedPatientDTO> rankedWaiting) {
         if (!automatic()) {
             return;
@@ -118,7 +118,7 @@ public class WhatsAppNotifier {
         return timeAlmostUp || nearTheFront;
     }
 
-    /** Texto del aviso; el frontend arma el mismo para el botón manual. */
+    /** Texto del notice; el frontend arma el mismo para el botón manual. */
     static String message(RankedPatientDTO p) {
         String name = firstName(p.getName());
         String ticket = TurnTicket.of(p.getName(), p.getDocument());
