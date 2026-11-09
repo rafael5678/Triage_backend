@@ -1,3 +1,4 @@
+/** AiController: application type for the triage hospital services. */
 package com.hospital.triage.ai.api;
 
 import com.hospital.triage.ai.application.service.ClinicalCase;
