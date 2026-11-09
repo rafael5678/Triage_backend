@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Relato libre del ingreso; la IA lo convierte en el formulario de triaje. */
+/** Relato libre del intake; la IA lo convierte en el formulario de triaje. */
 @Data
 @Builder
 @NoArgsConstructor
