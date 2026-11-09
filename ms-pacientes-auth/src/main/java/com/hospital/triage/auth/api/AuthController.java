@@ -1,3 +1,4 @@
+/** AuthController: application type for the triage hospital services. */
 package com.hospital.triage.auth.api;
 
 import com.hospital.triage.auth.application.service.AuthService;
