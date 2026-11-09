@@ -4,6 +4,7 @@ import com.hospital.triage.auth.application.service.AuthService;
 import com.hospital.triage.common.dto.CreateUserRequest;
 import com.hospital.triage.common.dto.LoginRequest;
 import com.hospital.triage.common.dto.SessionUserDTO;
+import com.hospital.triage.common.dto.UpdateUserRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,11 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public SessionUserDTO createUser(@Valid @RequestBody CreateUserRequest request) {
         return auth.createUser(request);
+    }
+
+    @PatchMapping("/admin/users/{id}")
+    public SessionUserDTO updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        return auth.updateUser(id, request);
     }
 
     @PatchMapping({"/admin/users/{id}/active", "/admin/users/{id}/activo"})

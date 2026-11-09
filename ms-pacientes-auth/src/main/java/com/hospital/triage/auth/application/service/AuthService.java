@@ -5,6 +5,7 @@ import com.hospital.triage.auth.infrastructure.persistence.AppUserRepository;
 import com.hospital.triage.common.dto.CreateUserRequest;
 import com.hospital.triage.common.dto.LoginRequest;
 import com.hospital.triage.common.dto.SessionUserDTO;
+import com.hospital.triage.common.dto.UpdateUserRequest;
 import com.hospital.triage.common.exception.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,6 +49,37 @@ public class AuthService {
 
     public List<SessionUserDTO> listUsers() {
         return users.findAll().stream().map(this::toSession).toList();
+    }
+
+    @Transactional
+    public SessionUserDTO updateUser(UUID id, UpdateUserRequest request) {
+        AppUser user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            String username = request.getUsername().trim();
+            if (username.contains(" ") || username.length() < 3 || username.length() > 32) {
+                throw new IllegalArgumentException("Username must be 3 to 32 characters without spaces");
+            }
+            users.findByUsernameIgnoreCase(username).ifPresent(other -> {
+                if (!other.getId().equals(id)) {
+                    throw new IllegalArgumentException("That username already exists");
+                }
+            });
+            user.setUsername(username);
+        }
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            String password = request.getPassword();
+            if (password.contains(" ") || password.length() < 8 || password.length() > 64) {
+                throw new IllegalArgumentException("Password must be 8 to 64 characters without spaces");
+            }
+            user.setPasswordHash(encoder.encode(password));
+        }
+        if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
+            user.setDisplayName(request.getDisplayName().trim());
+        }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+        return toSession(users.save(user));
     }
 
     @Transactional
