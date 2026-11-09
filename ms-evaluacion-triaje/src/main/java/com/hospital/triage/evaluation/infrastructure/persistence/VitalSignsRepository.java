@@ -1,3 +1,4 @@
+/** VitalSignsRepository: application type for the triage hospital services. */
 package com.hospital.triage.evaluation.infrastructure.persistence;
 
 import com.hospital.triage.evaluation.domain.entity.VitalSigns;
