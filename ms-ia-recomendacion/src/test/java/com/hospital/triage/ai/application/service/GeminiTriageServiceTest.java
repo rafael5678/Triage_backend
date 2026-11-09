@@ -1,3 +1,4 @@
+/** GeminiTriageServiceTest: application type for the triage hospital services. */
 package com.hospital.triage.ai.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
