@@ -1,3 +1,4 @@
+/** AppUser: application type for the triage hospital services. */
 package com.hospital.triage.auth.domain.entity;
 
 import com.hospital.triage.common.enums.UserRole;
