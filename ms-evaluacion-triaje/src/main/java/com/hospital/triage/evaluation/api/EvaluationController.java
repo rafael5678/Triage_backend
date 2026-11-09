@@ -65,7 +65,7 @@ public class EvaluationController {
         return evaluationService.updateStatus(patientId, status);
     }
 
-    /** Todas las mediciones del paciente, de la primera a la última, para la línea de tiempo. */
+    /** Every measurement for the patient, first to last, for the timeline. */
     @GetMapping({"/patients/{patientId}/history", "/pacientes/{patientId}/historial"})
     public java.util.List<RankedPatientDTO> history(@PathVariable("patientId") UUID patientId) {
         return evaluationService.history(patientId);
