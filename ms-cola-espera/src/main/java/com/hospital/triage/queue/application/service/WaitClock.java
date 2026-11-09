@@ -5,7 +5,7 @@ import com.hospital.triage.common.dto.RankedPatientDTO;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 
-/** Cuánto lleva esperando un paciente desde que llegó y cuánto le queda de su tiempo máximo. */
+/** How long a patient has waited since arrival and how much of the max wait remains. */
 final class WaitClock {
 
     static final int DEFAULT_MAX_WAIT = 30;
@@ -25,7 +25,7 @@ final class WaitClock {
         return p.getMaxWaitMinutes() == null ? DEFAULT_MAX_WAIT : p.getMaxWaitMinutes();
     }
 
-    /** Llena waitedMinutes, minutesLeft y overdue. Negativo = ya se pasó del tiempo máximo. */
+    /** Fills waitedMinutes, minutesLeft and overdue. Negative means the max wait already passed. */
     static RankedPatientDTO stamp(RankedPatientDTO p, OffsetDateTime now) {
         int waited = waited(p, now);
         int left = maxWait(p) - waited;
