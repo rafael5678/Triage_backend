@@ -1,3 +1,4 @@
+/** QueueController: application type for the triage hospital services. */
 package com.hospital.triage.queue.api;
 
 import com.hospital.triage.common.dto.BoardEntryDTO;
