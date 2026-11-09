@@ -1,3 +1,4 @@
+/** InvalidCredentialsException: application type for the triage hospital services. */
 package com.hospital.triage.common.exception;
 
 public class InvalidCredentialsException extends RuntimeException {
