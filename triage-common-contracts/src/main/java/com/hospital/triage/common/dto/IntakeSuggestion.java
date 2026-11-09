@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Formulario propuesto por la IA. estimatedFields lista los signos que no se midieron. */
+/** Formulario propuesto por la IA. estimatedFields lista los vitals que no se midieron. */
 @Data
 @Builder
 @NoArgsConstructor
