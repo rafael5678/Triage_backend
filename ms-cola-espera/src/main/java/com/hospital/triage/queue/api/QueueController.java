@@ -63,7 +63,7 @@ public class QueueController {
         return insights.stats();
     }
 
-    /** Pantalla pública de sala: sin nombres ni documento completo. */
+    /** Pantalla pública de room: sin nombres ni documento completo. */
     @GetMapping({"/board", "/tablero"})
     public List<BoardEntryDTO> board() {
         return insights.board();
@@ -86,13 +86,13 @@ public class QueueController {
         return changed(queueService.updateStatus(patientId, status));
     }
 
-    /** present=false: se registró pero todavía no está en la sala. */
+    /** present=false: se registró pero todavía no está en la room. */
     @PatchMapping({"/care/{patientId}/presence", "/atender/{patientId}/presencia"})
     public RankedPatientDTO presence(@PathVariable("patientId") UUID patientId, @RequestParam("present") boolean present) {
         return changed(queueService.setPresence(patientId, present));
     }
 
-    /** El personal avisó al paciente (por ejemplo, con el botón de WhatsApp de la app). */
+    /** El personal avisó al patient (por ejemplo, con el botón de WhatsApp de la app). */
     @PostMapping({"/care/{patientId}/notified", "/atender/{patientId}/avisado"})
     public RankedPatientDTO notified(@PathVariable("patientId") UUID patientId,
                                      @RequestParam(value = "channel", defaultValue = "MANUAL") String channel) {
