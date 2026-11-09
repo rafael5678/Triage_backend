@@ -40,7 +40,7 @@ public class EvaluationService {
 
     public RankedPatientDTO evaluate(VitalSignsDTO dto) {
         PatientSnapshot patient = patients.require(dto.getPatientId());
-        // Confirmar en cola no vuelve a llamar a Gemini: el análisis ya se vio en pantalla.
+        // Confirming on the queue does not call Gemini again: analysis already ran on screen.
         Scored scored = score(patient.conditionId(), patient.reason(), patient.history(),
                 patient.age() == null ? 0 : patient.age(), patient.sex(),
                 dto.getHeartRate(), dto.getSpo2(), dto.getSystolic(), dto.getDiastolic(),
@@ -153,7 +153,7 @@ public class EvaluationService {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
                 pregnant, gestationWeeks, extra.getEstimatedFields(), extra.getConditionSeverity());
-        // Guardar en cola no consulta Gemini: el análisis ya se vio al calcular.
+        // Saving on the queue does not call Gemini: analysis already ran when scoring.
         if (!consultAi) {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();
             var result = triageService.merge(protocol, ia, extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty());
