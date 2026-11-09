@@ -3,7 +3,7 @@ package com.hospital.triage.common.dto;
 import java.util.List;
 
 /**
- * Datos opcionales del ingreso que comparten el análisis, la evaluación y la reevaluación.
+ * Datos opcionales del intake que comparten el análisis, la evaluation y la reevaluation.
  * consciousness usa la escala AVPU: A alerta, C confusión nueva, V responde a la voz, P al dolor, U no responde.
  */
 public interface ExtraFindings {
@@ -19,7 +19,7 @@ public interface ExtraFindings {
 
     List<String> getEstimatedFields();
 
-    /** Gravedad 0-100 del síntoma en el catálogo del hospital (la que definió administración). */
+    /** severity 0-100 del síntoma en el catálogo del hospital (la que definió administración). */
     default Integer getConditionSeverity() {
         return null;
     }
