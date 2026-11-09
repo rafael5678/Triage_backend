@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 /**
- * Decide a qué área de urgencias va el paciente y en cuánto tiempo debe atenderse.
+ * Decide a qué área de urgencias va el patient y en cuánto tiempo debe atenderse.
  * El nivel de triaje fija el área base; algunos motivos activan un código institucional
  * con un área mínima. La sugerencia de la IA solo puede subir de área, nunca bajar.
  */
