@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** Catálogo inicial para una base vacía. Después lo administra el portal de administración. */
+/** Catálogo inicial para una base vacía. after lo administra el portal de administración. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
