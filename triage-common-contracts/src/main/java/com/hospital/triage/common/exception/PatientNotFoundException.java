@@ -1,3 +1,4 @@
+/** PatientNotFoundException: application type for the triage hospital services. */
 package com.hospital.triage.common.exception;
 
 public class PatientNotFoundException extends RuntimeException {
