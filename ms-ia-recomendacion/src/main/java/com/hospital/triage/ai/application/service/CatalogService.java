@@ -39,7 +39,7 @@ public class CatalogService {
         row.setHint(request.getHint() == null ? "" : request.getHint().trim());
         row.setSeverity(request.getSeverity());
         row.setActive(request.getActive() == null || request.getActive());
-        if (created) {
+        if (created || (row.getCreatedAt() == null && (request.getId() == null || request.getId().isBlank()))) {
             row.setCreatedAt(OffsetDateTime.now());
         }
         return symptoms.save(row);
