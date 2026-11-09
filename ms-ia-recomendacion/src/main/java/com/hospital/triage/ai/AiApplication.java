@@ -1,3 +1,4 @@
+/** AiApplication: application type for the triage hospital services. */
 package com.hospital.triage.ai;
 
 import org.springframework.boot.SpringApplication;
