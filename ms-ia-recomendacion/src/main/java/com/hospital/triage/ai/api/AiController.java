@@ -3,6 +3,7 @@ package com.hospital.triage.ai.api;
 
 import com.hospital.triage.ai.application.service.ClinicalCase;
 import com.hospital.triage.ai.application.service.FieldExplainer;
+import com.hospital.triage.ai.application.service.ClinicalLlmClient;
 import com.hospital.triage.ai.application.service.GeminiClient;
 import com.hospital.triage.ai.application.service.GeminiTriageService;
 import com.hospital.triage.ai.application.service.IntakeService;
@@ -31,6 +32,7 @@ public class AiController {
     private final IntakeService intake;
     private final FieldExplainer explainer;
     private final GeminiClient geminiClient;
+    private final ClinicalLlmClient llm;
 
     @org.springframework.beans.factory.annotation.Value("${app.gemini.daily-limit:150}")
     private int dailyLimit;
@@ -41,7 +43,7 @@ public class AiController {
                 "status", "ok",
                 "service", "ms-ia-recomendacion",
                 "port", "8084",
-                "ai", gemini.configured() ? "gemini" : "inactive",
+                "ai", llm.providerLabel(),
                 "geminiHoy", geminiClient.usedToday(),
                 "geminiTopeDiario", dailyLimit
         );

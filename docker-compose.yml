@@ -84,6 +84,8 @@ services:
       CORS_ORIGINS: http://localhost:5173,https://clasificador-predictivo-e.vercel.app
       PORT: 8084
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:claude-haiku-5-5}
     ports:
       - "8084:8084"
     networks:

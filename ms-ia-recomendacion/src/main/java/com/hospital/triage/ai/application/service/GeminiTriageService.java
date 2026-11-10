@@ -6,6 +6,7 @@ import com.hospital.triage.ai.domain.entity.Symptom;
 import com.hospital.triage.ai.infrastructure.persistence.SymptomRepository;
 import com.hospital.triage.common.dto.AiAssistDTO;
 import com.hospital.triage.common.enums.CareArea;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,26 +16,31 @@ import java.util.Optional;
 @Service
 public class GeminiTriageService {
 
-    private final GeminiClient gemini;
+    private final ClinicalLlmClient llm;
     private final SymptomRepository symptoms;
 
     public GeminiTriageService(GeminiClient gemini, SymptomRepository symptoms) {
-        this.gemini = gemini;
+        this(new ClinicalLlmClient(gemini, null), symptoms);
+    }
+
+    @Autowired
+    public GeminiTriageService(ClinicalLlmClient llm, SymptomRepository symptoms) {
+        this.llm = llm;
         this.symptoms = symptoms;
     }
 
     public boolean configured() {
-        return gemini.configured();
+        return llm.anyConfigured();
     }
 
     public AiAssistDTO assist(ClinicalCase c) {
-        if (!gemini.configured()) {
+        if (!llm.anyConfigured()) {
             return AiAssistDTO.builder().active(false).build();
         }
         var catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Symptom chosen = c.conditionId() == null ? null : symptoms.findById(c.conditionId()).orElse(null);
         boolean hasPhoto = GeminiClient.cleanBase64(c.photoBase64()) != null;
-        Optional<JsonNode> answer = gemini.generate(
+        Optional<JsonNode> answer = llm.generate(
                 prompt(c, catalog, chosen, hasPhoto),
                 c.photoBase64(),
                 c.photoMime(),

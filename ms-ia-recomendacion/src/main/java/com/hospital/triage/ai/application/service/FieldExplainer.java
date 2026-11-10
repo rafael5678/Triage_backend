@@ -3,18 +3,20 @@ package com.hospital.triage.ai.application.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hospital.triage.common.dto.FieldExplanation;
 import com.hospital.triage.common.dto.FieldExplanationRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /** Explica en palabras simples un dato del formulario (qué es, cómo se mide y qué significa el valor). */
 @Service
-@RequiredArgsConstructor
 public class FieldExplainer {
 
-    private final GeminiClient gemini;
+    private final ClinicalLlmClient llm;
+
+    public FieldExplainer(ClinicalLlmClient llm) {
+        this.llm = llm;
+    }
 
     public FieldExplanation explain(FieldExplanationRequest request) {
-        if (!gemini.configured()) {
+        if (!llm.anyConfigured()) {
             return FieldExplanation.builder().active(false).build();
         }
         String prompt = """
@@ -32,7 +34,7 @@ public class FieldExplainer {
                 request.getValue() == null || request.getValue().isBlank() ? "(sin valor)" : request.getValue(),
                 request.getContext() == null ? "" : request.getContext()
         );
-        return gemini.generate(prompt, null, null, 768)
+        return llm.generate(prompt, null, null, 768)
                 .map(this::toExplanation)
                 .orElseGet(() -> FieldExplanation.builder().active(false).build());
     }

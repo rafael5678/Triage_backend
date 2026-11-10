@@ -6,7 +6,7 @@ import com.hospital.triage.ai.domain.entity.Symptom;
 import com.hospital.triage.ai.infrastructure.persistence.SymptomRepository;
 import com.hospital.triage.common.dto.IntakeRequest;
 import com.hospital.triage.common.dto.IntakeSuggestion;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,23 +20,33 @@ import java.util.stream.Collectors;
 
 /** Convierte el relato (y la foto) del intake en el formulario de triaje. */
 @Service
-@RequiredArgsConstructor
 public class IntakeService {
 
     static final List<String> VITALS = List.of("heartRate", "spo2", "systolic", "diastolic", "temperature", "respiratoryRate");
 
-    private final GeminiClient gemini;
+    private final ClinicalLlmClient llm;
     private final SymptomRepository symptoms;
     private final ObjectMapper json;
 
+    public IntakeService(GeminiClient gemini, SymptomRepository symptoms, ObjectMapper json) {
+        this(new ClinicalLlmClient(gemini, null), symptoms, json);
+    }
+
+    @Autowired
+    public IntakeService(ClinicalLlmClient llm, SymptomRepository symptoms, ObjectMapper json) {
+        this.llm = llm;
+        this.symptoms = symptoms;
+        this.json = json;
+    }
+
     public IntakeSuggestion suggest(IntakeRequest request) {
-        if (!gemini.configured()) {
+        if (!llm.anyConfigured()) {
             return IntakeSuggestion.builder().active(false).build();
         }
         List<Symptom> catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Map<String, Object> known = request.getKnown() == null ? Map.of() : request.getKnown();
         boolean hasPhoto = GeminiClient.cleanBase64(request.getPhotoBase64()) != null;
-        var answer = gemini.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), hasPhoto ? 900 : 640);
+        var answer = llm.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), hasPhoto ? 900 : 640);
         if (answer.isEmpty()) {
             return IntakeSuggestion.builder().active(false).build();
         }

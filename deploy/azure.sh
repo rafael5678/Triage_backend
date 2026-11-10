@@ -53,6 +53,7 @@ read -r -p "URL del frontend en Vercel [${FRONTEND_DEFAULT}]: " CORS_ORIGINS
 CORS_ORIGINS="${CORS_ORIGINS:-$FRONTEND_DEFAULT}"
 read -r -s -p "DATABASE_URL de Supabase (Session pooler, con la clave puesta): " DATABASE_URL; echo
 read -r -s -p "GEMINI_API_KEY: " GEMINI_API_KEY; echo
+read -r -s -p "ANTHROPIC_API_KEY (Haiku backup, Enter to skip): " ANTHROPIC_API_KEY; echo
 read -r -s -p "Clave del usuario admin de la app: " ADMIN_PASSWORD; echo
 
 SECRETS=()
@@ -93,10 +94,16 @@ PACIENTES="$(fqdn ms-pacientes-auth)"
 
 echo "== 2/5 ms-ia-recomendacion"
 SECRETS=("dburl=${DATABASE_URL}" "gemini=${GEMINI_API_KEY}")
-upsert ms-ia-recomendacion http2 \
-  MODULE=ms-ia-recomendacion PORT=8080 \
-  DATABASE_URL=secretref:dburl CORS_ORIGINS="$CORS_ORIGINS" \
+IA_VARS=(
+  MODULE=ms-ia-recomendacion PORT=8080
+  DATABASE_URL=secretref:dburl CORS_ORIGINS="$CORS_ORIGINS"
   GEMINI_API_KEY=secretref:gemini GEMINI_MODEL="gemini-1.5-flash,gemini-2.0-flash" GEMINI_DAILY_LIMIT=150
+)
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  SECRETS+=("anthropic=${ANTHROPIC_API_KEY}")
+  IA_VARS+=(ANTHROPIC_API_KEY=secretref:anthropic ANTHROPIC_MODEL=claude-haiku-5-5)
+fi
+upsert ms-ia-recomendacion http2 "${IA_VARS[@]}"
 IA="$(fqdn ms-ia-recomendacion)"
 
 echo "== 3/5 ms-evaluacion-triaje"

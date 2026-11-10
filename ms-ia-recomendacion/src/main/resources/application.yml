@@ -33,3 +33,6 @@ app:
     # La clave se comparte con otras apps: por encima de esto el triaje sigue solo con el protocolo.
     daily-limit: ${GEMINI_DAILY_LIMIT:150}
     per-minute-limit: ${GEMINI_PER_MINUTE_LIMIT:6}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-haiku-5-5}
