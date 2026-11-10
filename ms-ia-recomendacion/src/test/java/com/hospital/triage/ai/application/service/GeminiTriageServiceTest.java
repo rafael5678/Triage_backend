@@ -90,6 +90,7 @@ class GeminiTriageServiceTest {
                 .protocolScore(40).news2(3)
                 .build();
         assertThat(GeminiTriageService.signsInRange(hypoxia)).isFalse();
+        assertThat(GeminiTriageService.minorLocalInjury(hand)).isTrue();
     }
 
     @Test

@@ -67,7 +67,7 @@ public class AnthropicClient {
             payload.put("model", model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
             payload.put("max_tokens", maxTokens);
             payload.put("temperature", 0.1);
-            payload.put("system", "Eres triage ESI. Responde SOLO un JSON válido. Si el puntaje es alto por un golpe o accidente y los signos están en rango, explícalo así: el puntaje sale por el motivo o la foto, NO por los signos. No digas que el cuerpo está en peligro por oxígeno o pulso cuando esos números están bien.");
+            payload.put("system", "Eres triage ESI. Responde SOLO un JSON válido. Lee relato + signos + foto. El menú (golpe fuerte) NO fija el score. Picadura de abeja en el ojo con signos normales = 22-42, no crítica. Derrame o pecho sí son altos aunque el menú esté mal.");
             payload.set("messages", json.createArrayNode().add(user));
 
             HttpRequest req = HttpRequest.newBuilder(MESSAGES)

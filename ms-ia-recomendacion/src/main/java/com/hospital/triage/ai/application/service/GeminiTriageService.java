@@ -68,9 +68,15 @@ public class GeminiTriageService {
             reasons.addAll(GeminiClient.texts(parsed.path("reasons"), 6));
         }
         CareArea area = CareArea.parse(GeminiClient.textOrNull(parsed.path("suggestedArea")));
+        Double suggested = parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null;
+        if (suggested != null && signsInRange(c) && minorLocalInjury(c) && suggested >= 62) {
+            suggested = 38.0;
+            lead = honestLead("el puntaje sale por el relato (lesión local), no por el catálogo ni por los signos", motif, hasPhoto);
+            meaning = "No es crítica: el menú decía golpe fuerte, pero el caso es local y los signos están estables.";
+        }
         return AiAssistDTO.builder()
                 .active(true)
-                .suggestedScore(parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null)
+                .suggestedScore(suggested)
                 .dangerLead(lead)
                 .meaning(meaning)
                 .reasons(reasons)
@@ -107,12 +113,14 @@ public class GeminiTriageService {
                 Signos MEDIDOS de emergencia (uno solo ya basta): SpO2 <=85 → 86-100; SpO2 70 es reanimación aunque el motivo sea un dedo. FC <40 → 86-100. Temp <=35 → mínimo 78. PAS <90 → mínimo 62. Varios a la vez → 90-100.
                 Puntúa SOLO este ingreso. Si cambian oxígeno, pulso o temperatura, el score DEBE cambiar. No reutilices un 78 anterior.
                 NUNCA copies el score del protocolo si no coincide con ESTOS números. SpO2 70 y FC 39 → 86-100. SpO2 95-100, pulso 60-100, PA ~120/80 y respiración 12-20 = signos ESTABLES.
-                El score del protocolo (%s) es referencia. Si los signos medidos empeoran, SUBE.
-                Gravedad de ESTE motivo en el catálogo del hospital: %s. Un golpe o accidente fuerte PUEDE dejar el puntaje alto aunque los signos estén bien: eso es el MOTIVO, no los signos.
-                EXPLICACIÓN (obligatoria): di CON CLARIDAD de dónde sale el puntaje.
-                - Si los signos están en rango, NO digas que el cuerpo está en peligro por oxígeno, pulso, presión o temperatura. Esos números no subieron el puntaje.
-                - Si el puntaje es alto por “golpe o accidente fuerte”, el relato (cayó, choque, moretones) o la foto, dilo así: “el puntaje sale por el tipo de golpe / el relato / la foto, no por los signos”.
-                - Si un signo SÍ está mal (hipoxia, shock, fiebre alta), entonces sí: “el puntaje sale por los signos: …”
+                El score del protocolo (%s) es SOLO una pista. TÚ puntúas el caso real. NO copies la gravedad del catálogo.
+                El id del menú (“trauma” / golpe fuerte) NO es el puntaje. Si el relato es picadura de abeja/avispa, moretón, ojo o párpado hinchado y los signos están en rango → score 22-42, área CONSULTA_PRIORITARIA o URGENCIAS, NUNCA 78 ni reanimación.
+                Si el relato es derrame (cara, brazo o habla de pronto rara) → 78-94 aunque el menú diga golpe o 30.
+                Si el relato es choque, moto, caída de altura o politrauma → 62-100.
+                Gravedad de catálogo (pista, no orden): %s.
+                EXPLICACIÓN (obligatoria): di de dónde sale el puntaje (relato, foto, signos). Nunca “porque el menú dice golpe fuerte”.
+                - Si los signos están en rango, NO digas que el cuerpo está en peligro por oxígeno o pulso.
+                - Si un signo SÍ está mal, entonces sí: “el puntaje sale por los signos: …”
                 - fromDataset: cada viñeta dice el número vs la edad y si ESE número subió el puntaje o no.
                 - fromGemini: relato, foto e hipótesis. No repitas que los signos están graves si están en rango.
                 - symptomExplanation: 4 a 6 frases, el mismo resumen de siempre: primero de dónde sale el puntaje, luego signos, relato y foto.
@@ -294,7 +302,7 @@ public class GeminiTriageService {
 
     private static List<String> honestReasons(List<String> rows, String motif, boolean hasPhoto) {
         List<String> honest = new ArrayList<>();
-        honest.add("El protocolo pone el piso alto por “" + motif + "”, no por los signos medidos.");
+        honest.add("El menú (“" + motif + "”) es una pista. El puntaje sale del relato, los signos y la foto, no de ese número del catálogo.");
         if (hasPhoto) {
             honest.add("La foto entra en la lectura del caso (herida, moretón, esfuerzo); no sustituye los números si estos están bien.");
         }
@@ -306,5 +314,16 @@ public class GeminiTriageService {
             }
         }
         return honest.stream().limit(5).toList();
+    }
+
+    static boolean minorLocalInjury(ClinicalCase c) {
+        String t = ((c.reason() == null ? "" : c.reason()) + " " + (c.history() == null ? "" : c.history())).toLowerCase();
+        if (t.contains("choque") || t.contains("altura") || t.contains("derrame") || t.contains("pecho")
+                || t.contains("no responde") || t.contains("cara torcida") || t.contains("habla")) {
+            return false;
+        }
+        return t.contains("picadura") || t.contains("abeja") || t.contains("avispa") || t.contains("pica")
+                || t.contains("moreton") || t.contains("moretón") || t.contains("párpado") || t.contains("parpado")
+                || t.contains("ojo") || t.contains("dedo") || t.contains("mano");
     }
 }

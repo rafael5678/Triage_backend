@@ -43,9 +43,13 @@ public class TriageService {
             Map.entry("cura", 8)
     );
 
-    /** Motivos que sí pueden forzar banda alta/crítica aunque los vitals aún se vean estables. */
+    /**
+     * Motivos que sí pueden forzar banda alta aunque los vitals se vean estables.
+     * Trauma is NOT here: the dropdown "golpe o accidente fuerte" is often a bee sting
+     * or a bruise. Claude + the story decide; only true crash/fall pins a floor.
+     */
     private static final Set<String> EMERGENCY_MOTIFS = Set.of(
-            "paro", "avc", "sca", "trauma", "disnea", "sepsis", "anafilaxia", "hemorragia", "convulsion"
+            "paro", "avc", "sca", "disnea", "sepsis", "anafilaxia", "hemorragia", "convulsion"
     );
 
     public record RiskResult(BigDecimal score, TriageLevel level, int news2) {}
@@ -114,6 +118,11 @@ public class TriageService {
                 : band.score(respiratoryRate, spo2Score, temperature.doubleValue(), systolic, heartRate);
         int news = vitalsScore + consciousnessPoints(avpu);
         int condition = conditionSeverity(conditionId, catalogSeverity);
+        boolean crisis = measuredCrisis(estimated, spo2Score, heartRate, systolic, temperature, avpu, band);
+        boolean majorTrauma = "trauma".equals(conditionId) && majorMechanism(reason, history);
+        if ("trauma".equals(conditionId) && !majorTrauma && !crisis) {
+            condition = Math.min(condition, 38);
+        }
         int comorb = scoreHistory(history);
 
         double shockTerm = band == null
@@ -125,10 +134,11 @@ public class TriageService {
                 + shockTerm
                 + ageTerm
                 + comorb * 0.55;
-        // Piso del catálogo: pecho/paro/trauma sí; un dedo con oxígeno 98 no se queda pegado en 78.
+        // Piso del catálogo: pecho/paro/derrame sí. Trauma solo si el relato es choque/altura.
         int catalogFloor = esiFloor(condition);
-        if (!EMERGENCY_MOTIFS.contains(conditionId == null ? "" : conditionId)
-                && !measuredCrisis(estimated, spo2Score, heartRate, systolic, temperature, avpu, band)) {
+        String motif = conditionId == null ? "" : conditionId;
+        boolean emergencyFloor = EMERGENCY_MOTIFS.contains(motif) || majorTrauma;
+        if (!emergencyFloor && !crisis) {
             catalogFloor = 0;
         }
         score = Math.max(score, catalogFloor);
@@ -233,16 +243,16 @@ public class TriageService {
         }
         double base = protocol.score().doubleValue();
         double suggested = Math.min(TriageBands.MAX, Math.max(TriageBands.MIN, ia.getSuggestedScore()));
-        if (suggested <= base) {
-            return protocol;
+        boolean sickVitals = protocol.news2() >= 5 || base >= TriageBands.RESUSCITATION;
+        double fused;
+        if (suggested >= base) {
+            fused = suggested;
+        } else if (sickVitals) {
+            fused = base;
+        } else {
+            fused = suggested;
         }
-        double extra = Math.min(38, suggested - base);
-        boolean photoAlarm = ia.getPhotoFindings() != null && !ia.getPhotoFindings().isBlank();
-        // Sin foto de alarma, no salte de un caso estable a crítica solo por el catálogo.
-        if (!photoAlarm && base < TriageBands.ESI_III && suggested >= TriageBands.ESI_II) {
-            extra = Math.min(extra, Math.max(0, TriageBands.ESI_III - 0.1 - base));
-        }
-        double fused = Math.min(TriageBands.MAX, base + extra);
+        fused = Math.min(TriageBands.MAX, Math.max(TriageBands.MIN, fused));
         BigDecimal rounded = BigDecimal.valueOf(fused).setScale(1, RoundingMode.HALF_UP);
         return new RiskResult(rounded, levelFrom(fused), protocol.news2());
     }
@@ -281,6 +291,28 @@ public class TriageService {
             }
         }
         return "P".equals(avpu) || "U".equals(avpu) || "V".equals(avpu);
+    }
+
+    /** Choque, caída de altura, politrauma. Una picadura o un moretón no entra. */
+    static boolean majorMechanism(String reason, String history) {
+        String t = ((reason == null ? "" : reason) + " " + (history == null ? "" : history)).toLowerCase();
+        if (t.isBlank()) {
+            return false;
+        }
+        String[] keys = {
+                "altura", "segundo piso", "tercer piso", "andamio", "choque", "volcad", "volcam",
+                "moto", "automovil", "automóvil", "atropell", "politrauma",
+                "arma", "puñal", "apunal", "bala", "disparo", "expulsad",
+                "craneo", "cráneo", "tce", "pelvis",
+                "inconscien", "no responde", "perdio el conocimiento", "perdió el conocimiento",
+                "sangrado abundante", "caida de", "caída de", "aplast"
+        };
+        for (String key : keys) {
+            if (t.contains(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static int esiFloor(int conditionSeverity) {

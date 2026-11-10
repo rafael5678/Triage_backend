@@ -124,7 +124,10 @@ public class IntakeService {
         return """
                 Eres enfermera jefe de triage de urgencias en Colombia. Con el relato%s llena el formulario de ingreso.
                 Reglas:
-                - conditionId: SOLO uno de estos ids del catálogo (el motivo más grave entre relato y foto):
+                - conditionId: SOLO uno de estos ids. Elige por lo que DESCRIBE el paciente, no por una palabra suelta.
+                  “me picó una abeja / avispa en el ojo” → cura (herida/picadura), NO trauma.
+                  “se me torció la cara o no habla” → avc. “dolor de pecho” → sca.
+                  trauma SOLO si hay choque, caída de altura o politrauma.
                 - %s
                 - comorbidityIds: SOLO ids de esta lista, si el relato los menciona:
                 - %s

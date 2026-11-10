@@ -87,7 +87,7 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("TC-07: Fusión IA: Gemini puede subir hasta 38 puntos si el caso completo lo justifica")
+    @DisplayName("TC-07: Fusión IA: Claude puede subir el puntaje si el relato (derrame, pecho) lo justifica")
     void tc07_fusionGeminiLimiteMaximo38Puntos() {
         TriageService.RiskResult protocol = new TriageService.RiskResult(
                 BigDecimal.valueOf(50.0), TriageLevel.TRIAGE_III_AMARILLO, 2
@@ -99,12 +99,12 @@ class TriageServiceTest {
 
         TriageService.RiskResult fused = triageService.merge(protocol, ia);
 
-        assertThat(fused.score()).isEqualTo(new BigDecimal("88.0"));
+        assertThat(fused.score()).isEqualTo(new BigDecimal("90.0"));
         assertThat(fused.level()).isEqualTo(TriageLevel.TRIAGE_I_ROJO);
     }
 
     @Test
-    @DisplayName("TC-08: Fusión IA: Gemini nunca reduce el riesgo establecido por protocolo")
+    @DisplayName("TC-08: Fusión IA: con signos graves (NEWS2 alto) la IA no baja el protocolo")
     void tc08_fusionGeminiNuncaReduceRiesgo() {
         TriageService.RiskResult protocol = new TriageService.RiskResult(
                 BigDecimal.valueOf(86.0), TriageLevel.TRIAGE_I_ROJO, 5
@@ -273,20 +273,31 @@ class TriageServiceTest {
     }
 
     @Test
-    @DisplayName("Gemini no salta de un caso estable a crítica")
-    void fusionNoSaltaDeMinimaACritica() {
-        TriageService.RiskResult protocol = new TriageService.RiskResult(
+    @DisplayName("Claude puede subir un menú barato si el relato es derrame, y bajar un golpe de catálogo si NEWS2 es bajo")
+    void fusionLeeElRelatoNoElMenu() {
+        TriageService.RiskResult cheapMenu = new TriageService.RiskResult(
                 BigDecimal.valueOf(30.0), TriageLevel.TRIAGE_V_AZUL, 0
         );
-        AiAssistDTO ia = AiAssistDTO.builder().active(true).suggestedScore(78.0).build();
-        TriageService.RiskResult fused = triageService.merge(protocol, ia);
-        assertThat(fused.score()).isLessThan(BigDecimal.valueOf(62.0));
+        AiAssistDTO stroke = AiAssistDTO.builder().active(true).suggestedScore(82.0).build();
+        assertThat(triageService.merge(cheapMenu, stroke).score()).isEqualByComparingTo(BigDecimal.valueOf(82.0));
 
-        AiAssistDTO withPhoto = AiAssistDTO.builder()
-                .active(true).suggestedScore(86.0)
-                .photoFindings("Sangrado activo extenso en la foto")
-                .build();
-        TriageService.RiskResult fromPhoto = triageService.merge(protocol, withPhoto);
-        assertThat(fromPhoto.score()).isGreaterThanOrEqualTo(BigDecimal.valueOf(62.0));
+        TriageService.RiskResult traumaMenu = new TriageService.RiskResult(
+                BigDecimal.valueOf(78.0), TriageLevel.TRIAGE_I_ROJO, 1
+        );
+        AiAssistDTO bee = AiAssistDTO.builder().active(true).suggestedScore(32.0).build();
+        assertThat(triageService.merge(traumaMenu, bee).score()).isEqualByComparingTo(BigDecimal.valueOf(32.0));
+    }
+
+    @Test
+    @DisplayName("Picadura en el ojo con signos normales no es crítica aunque el menú sea trauma")
+    void picaduraNoEsCriticaPorElMenu() {
+        TriageService withCatalog = new TriageService(id -> Optional.of(90));
+        TriageService.RiskResult bee = withCatalog.calculate(
+                34, 78, 98, 118, 76, BigDecimal.valueOf(36.6), 16, "trauma", "",
+                null, 4, "A", false, null, List.of(), 90,
+                "Señor de 34 años con accidente en el ojo tras picadura de abeja"
+        );
+        assertThat(bee.score()).isLessThan(BigDecimal.valueOf(50.0));
+        assertThat(bee.level()).isNotEqualTo(TriageLevel.TRIAGE_I_ROJO);
     }
 }

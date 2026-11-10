@@ -19,7 +19,7 @@ final class HospitalDatasetPack {
                 .collect(Collectors.joining("\n- "));
         return """
                 PROTOCOLO: score 0-100. Motivo + NEWS2 + edad + todos los signos medidos juntos. ESI: >=78 I, >=62 II, >=42 III, >=22 IV, resto V.
-                El catálogo fija piso en pecho, paro, derrame o trauma (golpe). Si los signos están en rango y el puntaje es alto, explícalo por el MOTIVO o la FOTO, no por los signos.
+                El catálogo es una pista, NO el puntaje. Picadura, ojo hinchado o moretón con signos estables no es 78 aunque el menú diga golpe. Derrame o pecho sí suben aunque el menú esté mal.
                 Integra edad, motivo, relato, foto y TODOS los números MEDIDOS de ESTE caso. Si cambian los números, cambia el score.
                 SpO2 <=85, FC <40 o temp <=34 medidos = ESI I (86-100) aunque el motivo sea piel o un dedo.
                 Un signo ESTIMADO se ignora. Dolor de cabeza o vómito con signos de reposo = III o menos, salvo alarma en foto o signos medidos graves.
