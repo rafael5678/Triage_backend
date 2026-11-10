@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Component
 public class ClinicalLlmClient {
@@ -37,9 +38,14 @@ public class ClinicalLlmClient {
     }
 
     public Optional<JsonNode> generate(String prompt, String photoBase64, String photoMime, int maxOutputTokens) {
+        return generate(prompt, photoBase64, photoMime, maxOutputTokens, null);
+    }
+
+    public Optional<JsonNode> generate(String prompt, String photoBase64, String photoMime, int maxOutputTokens,
+                                       Predicate<JsonNode> accept) {
         if (anthropic != null && anthropic.configured()) {
             Optional<JsonNode> first = anthropic.generate(prompt, photoBase64, photoMime, maxOutputTokens);
-            if (first.isPresent()) {
+            if (first.isPresent() && (accept == null || accept.test(first.get()))) {
                 return first;
             }
         }

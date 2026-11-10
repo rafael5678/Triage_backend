@@ -46,11 +46,27 @@ public class IntakeService {
         List<Symptom> catalog = symptoms.findByActiveTrueOrderBySeverityDesc();
         Map<String, Object> known = request.getKnown() == null ? Map.of() : request.getKnown();
         boolean hasPhoto = GeminiClient.cleanBase64(request.getPhotoBase64()) != null;
-        var answer = llm.generate(prompt(request, catalog, known, hasPhoto), request.getPhotoBase64(), request.getPhotoMime(), hasPhoto ? 900 : 640);
+        var answer = llm.generate(
+                prompt(request, catalog, known, hasPhoto),
+                request.getPhotoBase64(),
+                request.getPhotoMime(),
+                hasPhoto ? 1200 : 800,
+                IntakeService::looksLikeIntake);
         if (answer.isEmpty()) {
             return IntakeSuggestion.builder().active(false).build();
         }
         return normalize(answer.get(), catalog, request, known, hasPhoto);
+    }
+
+    static boolean looksLikeIntake(JsonNode node) {
+        if (node == null || node.isMissingNode()) {
+            return false;
+        }
+        if (node.has("score") && !node.has("conditionId") && !node.has("age")) {
+            return false;
+        }
+        return node.has("conditionId") || node.has("reason") || node.has("age")
+                || node.has("heartRate") || node.has("notes") || node.has("photoFindings");
     }
 
     IntakeSuggestion normalize(JsonNode a, List<Symptom> catalog, IntakeRequest request, Map<String, Object> known, boolean hasPhoto) {

@@ -67,11 +67,11 @@ public class AnthropicClient {
             payload.put("model", model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
             payload.put("max_tokens", maxTokens);
             payload.put("temperature", 0.1);
-            payload.put("system", "Eres triage ESI. Responde SOLO un JSON válido. Lee relato + signos + foto. El menú (golpe fuerte) NO fija el score. Picadura de abeja en el ojo con signos normales = 22-42, no crítica. Derrame o pecho sí son altos aunque el menú esté mal.");
+            payload.put("system", "Responde SOLO un JSON válido con el esquema que pide el mensaje del usuario. Sin markdown, sin texto alrededor.");
             payload.set("messages", json.createArrayNode().add(user));
 
             HttpRequest req = HttpRequest.newBuilder(MESSAGES)
-                    .timeout(image != null ? Duration.ofSeconds(20) : Duration.ofSeconds(12))
+                    .timeout(image != null ? Duration.ofSeconds(45) : Duration.ofSeconds(20))
                     .header("Content-Type", "application/json")
                     .header("x-api-key", apiKey.trim())
                     .header("anthropic-version", "2023-06-01")
@@ -94,21 +94,26 @@ public class AnthropicClient {
                 log.warn("Anthropic Haiku replied without text");
                 return Optional.empty();
             }
-            return Optional.of(json.readTree(stripFence(text)));
+            return Optional.of(json.readTree(extractJson(text)));
         } catch (Exception ex) {
             log.warn("Anthropic Haiku unavailable: {}", ex.getMessage());
             return Optional.empty();
         }
     }
 
-    private static String stripFence(String text) {
+    private static String extractJson(String text) {
         String t = text.trim();
         if (t.startsWith("```")) {
             int start = t.indexOf('\n');
             int end = t.lastIndexOf("```");
             if (start > 0 && end > start) {
-                return t.substring(start + 1, end).trim();
+                t = t.substring(start + 1, end).trim();
             }
+        }
+        int from = t.indexOf('{');
+        int to = t.lastIndexOf('}');
+        if (from >= 0 && to > from) {
+            return t.substring(from, to + 1);
         }
         return t;
     }
