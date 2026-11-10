@@ -36,3 +36,4 @@ app:
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
     model: ${ANTHROPIC_MODEL:claude-haiku-5-5}
+    vision-model: ${ANTHROPIC_VISION_MODEL:claude-opus-5-5}

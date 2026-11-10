@@ -21,7 +21,7 @@ import java.util.Optional;
 @Component
 public class AnthropicClient {
 
-    private static final int TOKEN_CAP = 1800;
+    private static final int TOKEN_CAP = 2500;
     private static final URI MESSAGES = URI.create("https://api.anthropic.com/v1/messages");
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
@@ -32,6 +32,9 @@ public class AnthropicClient {
 
     @Value("${app.anthropic.model:claude-haiku-5-5}")
     private String model;
+
+    @Value("${app.anthropic.vision-model:claude-opus-5-5}")
+    private String visionModel;
 
     public AnthropicClient(ObjectMapper json) {
         this.json = json;
@@ -64,14 +67,19 @@ public class AnthropicClient {
             user.put("role", "user");
             user.set("content", content);
             var payload = json.createObjectNode();
-            payload.put("model", model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
+            String chosen = (image != null && visionModel != null && !visionModel.isBlank())
+                    ? visionModel.trim()
+                    : (model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
+            payload.put("model", chosen);
             payload.put("max_tokens", maxTokens);
             payload.put("temperature", 0.1);
-            payload.put("system", "Responde SOLO un JSON válido con el esquema que pide el mensaje del usuario. Sin markdown, sin texto alrededor.");
+            payload.put("system", image != null
+                    ? "Eres médico de triage. PRIMERO mira la foto (lesiones, color, hinchazón, necrosis, sangrado). LUEGO el relato. LUEGO los signos. El menú del formulario no es el puntaje. Responde SOLO el JSON pedido."
+                    : "Responde SOLO un JSON válido con el esquema que pide el mensaje del usuario. Sin markdown.");
             payload.set("messages", json.createArrayNode().add(user));
 
             HttpRequest req = HttpRequest.newBuilder(MESSAGES)
-                    .timeout(image != null ? Duration.ofSeconds(45) : Duration.ofSeconds(20))
+                    .timeout(image != null ? Duration.ofSeconds(70) : Duration.ofSeconds(20))
                     .header("Content-Type", "application/json")
                     .header("x-api-key", apiKey.trim())
                     .header("anthropic-version", "2023-06-01")
@@ -79,8 +87,25 @@ public class AnthropicClient {
                     .build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (res.statusCode() >= 400) {
-                log.warn("Anthropic Haiku HTTP {}: {}", res.statusCode(), res.body());
-                return Optional.empty();
+                log.warn("Anthropic {} HTTP {}: {}", chosen, res.statusCode(), res.body());
+                if (image != null && visionModel != null && chosen.equals(visionModel.trim())
+                        && model != null && !model.isBlank() && !chosen.equals(model.trim())) {
+                    payload.put("model", model.trim());
+                    HttpRequest retry = HttpRequest.newBuilder(MESSAGES)
+                            .timeout(Duration.ofSeconds(45))
+                            .header("Content-Type", "application/json")
+                            .header("x-api-key", apiKey.trim())
+                            .header("anthropic-version", "2023-06-01")
+                            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(payload)))
+                            .build();
+                    res = http.send(retry, HttpResponse.BodyHandlers.ofString());
+                    if (res.statusCode() >= 400) {
+                        log.warn("Anthropic fallback {} HTTP {}: {}", model, res.statusCode(), res.body());
+                        return Optional.empty();
+                    }
+                } else {
+                    return Optional.empty();
+                }
             }
             JsonNode root = json.readTree(res.body());
             String text = "";

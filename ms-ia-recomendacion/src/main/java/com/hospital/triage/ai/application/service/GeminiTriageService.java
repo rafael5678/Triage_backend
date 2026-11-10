@@ -57,10 +57,12 @@ public class GeminiTriageService {
         String reading = GeminiClient.textOrNull(parsed.path("symptomExplanation"));
         if (signsInRange(c)) {
             fromDataset = keepHonestVitals(fromDataset, c);
-            lead = honestLead(lead, motif, hasPhoto);
-            meaning = honestMeaning(meaning, motif);
-            reading = honestReading(reading, motif, hasPhoto, c);
-            fromGemini = honestReasons(fromGemini, motif, hasPhoto);
+            if (blamesSigns(lead) || blamesCatalog(lead, motif)) {
+                lead = caseLead(c, hasPhoto);
+            }
+            if (blamesSigns(meaning) || blamesCatalog(meaning, motif)) {
+                meaning = honestMeaning(meaning, motif);
+            }
         }
         List<String> reasons = new ArrayList<>(fromDataset);
         reasons.addAll(fromGemini);
@@ -69,7 +71,7 @@ public class GeminiTriageService {
         }
         CareArea area = CareArea.parse(GeminiClient.textOrNull(parsed.path("suggestedArea")));
         Double suggested = parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null;
-        if (suggested != null && signsInRange(c) && minorLocalInjury(c) && suggested >= 62) {
+        if (suggested != null && signsInRange(c) && minorLocalInjury(c) && suggested >= 62 && !hasPhoto) {
             suggested = 38.0;
             lead = honestLead("el puntaje sale por el relato (lesión local), no por el catálogo ni por los signos", motif, hasPhoto);
             meaning = "No es crítica: el menú decía golpe fuerte, pero el caso es local y los signos están estables.";
@@ -113,6 +115,8 @@ public class GeminiTriageService {
                 Signos MEDIDOS de emergencia (uno solo ya basta): SpO2 <=85 → 86-100; SpO2 70 es reanimación aunque el motivo sea un dedo. FC <40 → 86-100. Temp <=35 → mínimo 78. PAS <90 → mínimo 62. Varios a la vez → 90-100.
                 Puntúa SOLO este ingreso. Si cambian oxígeno, pulso o temperatura, el score DEBE cambiar. No reutilices un 78 anterior.
                 NUNCA copies el score del protocolo si no coincide con ESTOS números. SpO2 70 y FC 39 → 86-100. SpO2 95-100, pulso 60-100, PA ~120/80 y respiración 12-20 = signos ESTABLES.
+                ORDEN OBLIGATORIO: 1) FOTO si hay (describe lo que VES: color, tamaño, pus, necrosis, hinchazón). 2) RELATO del paciente. 3) SIGNOS medidos. 4) El menú del formulario es el último y no nombra el puntaje.
+                NUNCA empieces dangerLead o scoreWhy con “el puntaje sale por el motivo (catálogo)”. Di lo que viste y lo que contó el paciente.
                 El score del protocolo (%s) es SOLO una pista. TÚ puntúas el caso real. NO copies la gravedad del catálogo.
                 El id del menú (“trauma” / golpe fuerte) NO es el puntaje. Si el relato es picadura de abeja/avispa, moretón, ojo o párpado hinchado y los signos están en rango → score 22-42, área CONSULTA_PRIORITARIA o URGENCIAS, NUNCA 78 ni reanimación.
                 Si el relato es derrame (cara, brazo o habla de pronto rara) → 78-94 aunque el menú diga golpe o 30.
@@ -249,24 +253,37 @@ public class GeminiTriageService {
                 || t.contains("reanim");
     }
 
+    private static boolean blamesCatalog(String text, String motif) {
+        if (text == null || text.isBlank()) {
+            return true;
+        }
+        String t = text.toLowerCase();
+        return t.contains("sale por el motivo") || t.contains("puntaje alto sale")
+                || (motif != null && !motif.isBlank() && t.contains(motif.toLowerCase()) && t.contains("motivo"));
+    }
+
+    private static String caseLead(ClinicalCase c, boolean hasPhoto) {
+        String story = c.reason() == null || c.reason().isBlank() ? "lo que cuenta el paciente" : c.reason();
+        if (hasPhoto) {
+            return "Los signos están en rango. El puntaje sale de la foto y del relato (" + story + "), no del menú del formulario.";
+        }
+        return "Los signos están en rango. El puntaje sale del relato (" + story + "), no del menú del formulario.";
+    }
+
     private static String honestLead(String lead, String motif, boolean hasPhoto) {
-        if (lead != null && !blamesSigns(lead) && (lead.toLowerCase().contains("motivo")
-                || lead.toLowerCase().contains("golpe")
-                || lead.toLowerCase().contains("relato")
-                || lead.toLowerCase().contains("foto")
-                || lead.toLowerCase().contains("accidente"))) {
+        if (lead != null && !blamesSigns(lead) && !blamesCatalog(lead, motif)) {
             return lead;
         }
-        String photo = hasPhoto ? " y por lo que se ve en la foto" : "";
-        return "El puntaje alto sale por el motivo (\"" + motif + "\")" + photo
-                + ", no por los signos: oxígeno, pulso, presión, temperatura y respiración están en rango para la edad.";
+        return hasPhoto
+                ? "Los signos están en rango. Hay que leer la foto y el relato; el menú no fija el puntaje."
+                : "Los signos están en rango. El puntaje sale del relato, no del menú.";
     }
 
     private static String honestMeaning(String meaning, String motif) {
-        if (meaning != null && !blamesSigns(meaning)) {
+        if (meaning != null && !blamesSigns(meaning) && !blamesCatalog(meaning, motif)) {
             return meaning;
         }
-        return "En la cola va adelante por el tipo de caso (“" + motif + "”), aunque los signos medidos estén estables.";
+        return "La cola usa el caso completo (relato, foto si hay, signos). El menú solo orienta.";
     }
 
     private static String honestReading(String reading, String motif, boolean hasPhoto, ClinicalCase c) {
