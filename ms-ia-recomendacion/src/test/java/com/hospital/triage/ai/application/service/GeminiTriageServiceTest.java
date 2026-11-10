@@ -74,6 +74,25 @@ class GeminiTriageServiceTest {
     }
 
     @Test
+    @DisplayName("Moretones con signos de reposo: los números están en rango")
+    void signosEnRangoMano() {
+        ClinicalCase hand = ClinicalCase.builder()
+                .conditionId("trauma").reason("moretones en la mano").age(28).sex("M")
+                .heartRate(73).spo2(95).systolic(117).diastolic(75)
+                .temperature(BigDecimal.valueOf(36.7)).respiratoryRate(17)
+                .painScale(2).consciousness("A").protocolScore(78.0).news2(1)
+                .build();
+        assertThat(GeminiTriageService.signsInRange(hand)).isTrue();
+        ClinicalCase hypoxia = ClinicalCase.builder()
+                .conditionId("cura").age(28).sex("M")
+                .heartRate(73).spo2(84).systolic(117).diastolic(75)
+                .temperature(BigDecimal.valueOf(36.7)).respiratoryRate(17)
+                .protocolScore(40).news2(3)
+                .build();
+        assertThat(GeminiTriageService.signsInRange(hypoxia)).isFalse();
+    }
+
+    @Test
     @DisplayName("TC-11: API key de Gemini ausente o vacía -> Fallback silencioso sin invocar HTTP")
     void tc11_apiKeyAusente() {
         ReflectionTestUtils.setField(client, "apiKey", "");

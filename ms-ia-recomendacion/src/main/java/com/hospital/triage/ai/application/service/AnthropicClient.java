@@ -1,4 +1,4 @@
-/** AnthropicClient: Haiku backup only. Same prompt as Gemini; do not change clinical voice. */
+/** AnthropicClient: primary clinical LLM. Gemini is fallback if this call is empty. */
 package com.hospital.triage.ai.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,16 +15,16 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * Claude Haiku when Gemini is down or out of free quota. Cheap model only; few output tokens.
+ * Claude Haiku first: faster and tighter on ESI than Gemini for this triage JSON.
  */
 @Slf4j
 @Component
 public class AnthropicClient {
 
-    private static final int TOKEN_CAP = 640;
+    private static final int TOKEN_CAP = 1800;
     private static final URI MESSAGES = URI.create("https://api.anthropic.com/v1/messages");
 
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private final ObjectMapper json;
 
     @Value("${app.anthropic.api-key:}")
@@ -66,11 +66,12 @@ public class AnthropicClient {
             var payload = json.createObjectNode();
             payload.put("model", model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
             payload.put("max_tokens", maxTokens);
-            payload.put("temperature", 0.15);
+            payload.put("temperature", 0.1);
+            payload.put("system", "Eres triage ESI. Responde SOLO un JSON válido. Si el puntaje es alto por un golpe o accidente y los signos están en rango, explícalo así: el puntaje sale por el motivo o la foto, NO por los signos. No digas que el cuerpo está en peligro por oxígeno o pulso cuando esos números están bien.");
             payload.set("messages", json.createArrayNode().add(user));
 
             HttpRequest req = HttpRequest.newBuilder(MESSAGES)
-                    .timeout(image != null ? Duration.ofSeconds(8) : Duration.ofSeconds(5))
+                    .timeout(image != null ? Duration.ofSeconds(20) : Duration.ofSeconds(12))
                     .header("Content-Type", "application/json")
                     .header("x-api-key", apiKey.trim())
                     .header("anthropic-version", "2023-06-01")

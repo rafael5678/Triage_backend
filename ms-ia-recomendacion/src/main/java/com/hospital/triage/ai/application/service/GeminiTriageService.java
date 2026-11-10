@@ -51,6 +51,17 @@ public class GeminiTriageService {
         JsonNode parsed = answer.get();
         List<String> fromDataset = GeminiClient.texts(parsed.path("fromDataset"), 4);
         List<String> fromGemini = GeminiClient.texts(parsed.path("fromGemini"), 6);
+        String motif = chosen == null ? "el motivo de consulta" : chosen.getLabel();
+        String lead = firstText(parsed, "scoreWhy", "dangerLead");
+        String meaning = GeminiClient.textOrNull(parsed.path("meaning"));
+        String reading = GeminiClient.textOrNull(parsed.path("symptomExplanation"));
+        if (signsInRange(c)) {
+            fromDataset = keepHonestVitals(fromDataset, c);
+            lead = honestLead(lead, motif, hasPhoto);
+            meaning = honestMeaning(meaning, motif);
+            reading = honestReading(reading, motif, hasPhoto, c);
+            fromGemini = honestReasons(fromGemini, motif, hasPhoto);
+        }
         List<String> reasons = new ArrayList<>(fromDataset);
         reasons.addAll(fromGemini);
         if (reasons.isEmpty()) {
@@ -60,8 +71,8 @@ public class GeminiTriageService {
         return AiAssistDTO.builder()
                 .active(true)
                 .suggestedScore(parsed.path("score").isNumber() ? parsed.path("score").asDouble() : null)
-                .dangerLead(GeminiClient.textOrNull(parsed.path("dangerLead")))
-                .meaning(GeminiClient.textOrNull(parsed.path("meaning")))
+                .dangerLead(lead)
+                .meaning(meaning)
                 .reasons(reasons)
                 .datasetReasons(fromDataset)
                 .geminiReasons(fromGemini)
@@ -69,7 +80,7 @@ public class GeminiTriageService {
                 .testsToOrder(GeminiClient.texts(parsed.path("testsToOrder"), 6))
                 .monitoring(GeminiClient.texts(parsed.path("monitoring"), 5))
                 .redFlags(GeminiClient.texts(parsed.path("redFlags"), 5))
-                .symptomExplanation(GeminiClient.textOrNull(parsed.path("symptomExplanation")))
+                .symptomExplanation(reading)
                 .suggestedArea(area == null ? null : area.name())
                 .photoFindings(hasPhoto ? GeminiClient.textOrNull(parsed.path("photoFindings")) : null)
                 .protocolScore(c.protocolScore())
@@ -95,22 +106,30 @@ public class GeminiTriageService {
                 Ignora los signos ESTIMADOS: no los uses ni para subir ni para bajar.
                 Signos MEDIDOS de emergencia (uno solo ya basta): SpO2 <=85 → 86-100; SpO2 70 es reanimación aunque el motivo sea un dedo. FC <40 → 86-100. Temp <=35 → mínimo 78. PAS <90 → mínimo 62. Varios a la vez → 90-100.
                 Puntúa SOLO este ingreso. Si cambian oxígeno, pulso o temperatura, el score DEBE cambiar. No reutilices un 78 anterior.
-                NUNCA copies el score del protocolo si no coincide con ESTOS números. SpO2 70 y FC 39 → 86-100. SpO2 98 y una herida en el dedo → 20-42, no crítica.
-                El score del protocolo (%s) es referencia. Si los signos medidos empeoran, SUBE. Si están en rango y el motivo no es pecho/paro/derrame/trauma, no pongas 78.
-                Gravedad de ESTE motivo en el catálogo del hospital: %s. Úsala en pecho, paro, derrame o trauma. En piel/dedo/cura con signos estables NO fuerces crítica.
+                NUNCA copies el score del protocolo si no coincide con ESTOS números. SpO2 70 y FC 39 → 86-100. SpO2 95-100, pulso 60-100, PA ~120/80 y respiración 12-20 = signos ESTABLES.
+                El score del protocolo (%s) es referencia. Si los signos medidos empeoran, SUBE.
+                Gravedad de ESTE motivo en el catálogo del hospital: %s. Un golpe o accidente fuerte PUEDE dejar el puntaje alto aunque los signos estén bien: eso es el MOTIVO, no los signos.
+                EXPLICACIÓN (obligatoria): di CON CLARIDAD de dónde sale el puntaje.
+                - Si los signos están en rango, NO digas que el cuerpo está en peligro por oxígeno, pulso, presión o temperatura. Esos números no subieron el puntaje.
+                - Si el puntaje es alto por “golpe o accidente fuerte”, el relato (cayó, choque, moretones) o la foto, dilo así: “el puntaje sale por el tipo de golpe / el relato / la foto, no por los signos”.
+                - Si un signo SÍ está mal (hipoxia, shock, fiebre alta), entonces sí: “el puntaje sale por los signos: …”
+                - fromDataset: cada viñeta dice el número vs la edad y si ESE número subió el puntaje o no.
+                - fromGemini: relato, foto e hipótesis. No repitas que los signos están graves si están en rango.
+                - symptomExplanation: 4 a 6 frases, el mismo resumen de siempre: primero de dónde sale el puntaje, luego signos, relato y foto.
                 No inventes reanimación por un dolor de cabeza, un vómito o un dedo hinchado con signos de reposo.
 
                 JSON:
                 {"score":0-100,
-                 "dangerLead":"una frase: qué está mal o por qué no es grave",
+                 "scoreWhy":"una frase: el puntaje sale por MOTIVO / RELATO / FOTO / SIGNOS (nombra cuál), y si los signos están bien dilo",
+                 "dangerLead":"misma idea, 1 frase, sin dramatizar los signos si están en rango",
                  "meaning":"qué implica en la cola, 1 frase",
-                 "fromDataset":["máx 3, con los números reales vs la edad"],
+                 "fromDataset":["máx 3, con los números reales vs la edad y si movieron o no el puntaje"],
                  "fromGemini":["máx 5: relato, foto y criterio clínico; hipótesis, no diagnóstico cerrado"],
                  "immediateActions":["máx 4, concretas"],
                  "testsToOrder":["máx 3"],
                  "monitoring":["máx 3"],
                  "redFlags":["máx 3: cuándo volver a triaje"],
-                 "symptomExplanation":"4 a 6 frases: cada signo clave vs la edad, qué sugiere el relato, qué muestra la foto",
+                 "symptomExplanation":"4 a 6 frases: de dónde sale el puntaje, cada signo clave vs la edad, qué sugiere el relato, qué muestra la foto",
                  "suggestedArea":"REANIMACION | URGENCIAS_CRITICAS | URGENCIAS | CONSULTA_PRIORITARIA | CONSULTA_EXTERNA",
                  "photoFindings":"%s"}
 
@@ -181,5 +200,111 @@ public class GeminiTriageService {
             return base;
         }
         return base + ". EMBARAZADA: el pulso en reposo suele ir 10-20 más alto (hacia 80-110); respiración 14-22; oxígeno sigue 95-100; presión NO debe llegar a 140/90 (eso es preeclampsia, no lo normal).";
+    }
+
+    private static String firstText(JsonNode parsed, String... fields) {
+        for (String field : fields) {
+            String value = GeminiClient.textOrNull(parsed.path(field));
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    static boolean signsInRange(ClinicalCase c) {
+        int spo2 = Math.min(100, c.spo2());
+        double temp = c.temperature() == null ? 36.6 : c.temperature().doubleValue();
+        return spo2 >= 95
+                && c.heartRate() >= 50 && c.heartRate() <= 110
+                && c.systolic() >= 90 && c.systolic() < 180
+                && c.respiratoryRate() >= 12 && c.respiratoryRate() <= 24
+                && temp > 35.5 && temp < 38.5
+                && (c.consciousness() == null || c.consciousness().isBlank()
+                || c.consciousness().toUpperCase().startsWith("A"));
+    }
+
+    private static boolean blamesSigns(String text) {
+        if (text == null || text.isBlank()) {
+            return true;
+        }
+        String t = text.toLowerCase();
+        if (t.contains("no por los signos") || t.contains("no porque los signos") || t.contains("signos están en rango")
+                || t.contains("signos medidos estén estables") || t.contains("signos en rango")) {
+            return false;
+        }
+        return (t.contains("signo") && (t.contains("peligro") || t.contains("grave") || t.contains("mal") || t.contains("inmediat")))
+                || (t.contains("oxígeno") && (t.contains("bajo") || t.contains("no le llega") || t.contains("hipox")))
+                || t.contains("cuerpo está en peligro")
+                || t.contains("peligro inmediato")
+                || t.contains("shock")
+                || t.contains("reanim");
+    }
+
+    private static String honestLead(String lead, String motif, boolean hasPhoto) {
+        if (lead != null && !blamesSigns(lead) && (lead.toLowerCase().contains("motivo")
+                || lead.toLowerCase().contains("golpe")
+                || lead.toLowerCase().contains("relato")
+                || lead.toLowerCase().contains("foto")
+                || lead.toLowerCase().contains("accidente"))) {
+            return lead;
+        }
+        String photo = hasPhoto ? " y por lo que se ve en la foto" : "";
+        return "El puntaje alto sale por el motivo (\"" + motif + "\")" + photo
+                + ", no por los signos: oxígeno, pulso, presión, temperatura y respiración están en rango para la edad.";
+    }
+
+    private static String honestMeaning(String meaning, String motif) {
+        if (meaning != null && !blamesSigns(meaning)) {
+            return meaning;
+        }
+        return "En la cola va adelante por el tipo de caso (“" + motif + "”), aunque los signos medidos estén estables.";
+    }
+
+    private static String honestReading(String reading, String motif, boolean hasPhoto, ClinicalCase c) {
+        String head = "El puntaje sale sobre todo por el motivo (“" + motif + "”)"
+                + (hasPhoto ? " y la foto" : "")
+                + ", no porque los signos estén mal. "
+                + "Oxígeno " + Math.min(100, c.spo2()) + "%, pulso " + c.heartRate()
+                + ", presión " + c.systolic() + "/" + c.diastolic()
+                + ", temperatura " + c.temperature()
+                + " y respiración " + c.respiratoryRate()
+                + " encajan con la edad. ";
+        if (reading == null || reading.isBlank() || blamesSigns(reading)) {
+            String story = c.reason() == null || c.reason().isBlank() ? "" : "Relato: " + c.reason() + " ";
+            return head + story + "Hay que mirar el golpe o la herida; los números vitales no son la alarma.";
+        }
+        return head + reading;
+    }
+
+    private static List<String> keepHonestVitals(List<String> rows, ClinicalCase c) {
+        List<String> honest = new ArrayList<>();
+        honest.add("Signos en rango para la edad: no suben el puntaje (O2 " + Math.min(100, c.spo2())
+                + "%, pulso " + c.heartRate() + ", PA " + c.systolic() + "/" + c.diastolic()
+                + ", T " + c.temperature() + ", FR " + c.respiratoryRate() + ").");
+        if (rows != null) {
+            for (String row : rows) {
+                if (row != null && !blamesSigns(row) && honest.stream().noneMatch(h -> h.equalsIgnoreCase(row))) {
+                    honest.add(row);
+                }
+            }
+        }
+        return honest.stream().limit(4).toList();
+    }
+
+    private static List<String> honestReasons(List<String> rows, String motif, boolean hasPhoto) {
+        List<String> honest = new ArrayList<>();
+        honest.add("El protocolo pone el piso alto por “" + motif + "”, no por los signos medidos.");
+        if (hasPhoto) {
+            honest.add("La foto entra en la lectura del caso (herida, moretón, esfuerzo); no sustituye los números si estos están bien.");
+        }
+        if (rows != null) {
+            for (String row : rows) {
+                if (row != null && !blamesSigns(row) && honest.stream().noneMatch(h -> h.equalsIgnoreCase(row))) {
+                    honest.add(row);
+                }
+            }
+        }
+        return honest.stream().limit(5).toList();
     }
 }

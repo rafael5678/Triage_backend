@@ -153,7 +153,7 @@ public class EvaluationService {
                          boolean consultAi) {
         var protocol = triageService.calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
                 conditionId, history, extra.getGlucose(), extra.getPainScale(), extra.getConsciousness(),
-                pregnant, gestationWeeks, extra.getEstimatedFields(), extra.getConditionSeverity());
+                pregnant, gestationWeeks, extra.getEstimatedFields(), extra.getConditionSeverity(), reason);
         // Saving on the queue does not call Gemini: analysis already ran when scoring.
         if (!consultAi) {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();

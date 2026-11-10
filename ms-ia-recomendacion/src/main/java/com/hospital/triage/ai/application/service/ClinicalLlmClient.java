@@ -1,4 +1,4 @@
-/** ClinicalLlmClient: Gemini first, Claude Haiku only if Gemini returns empty. */
+/** ClinicalLlmClient: Claude first (faster, better triage), Gemini only if Claude is empty. */
 package com.hospital.triage.ai.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,27 +24,27 @@ public class ClinicalLlmClient {
     public String providerLabel() {
         boolean g = gemini.configured();
         boolean h = anthropic != null && anthropic.configured();
-        if (g && h) {
-            return "gemini+haiku";
-        }
-        if (g) {
-            return "gemini";
+        if (h && g) {
+            return "haiku+gemini";
         }
         if (h) {
             return "haiku";
+        }
+        if (g) {
+            return "gemini";
         }
         return "inactive";
     }
 
     public Optional<JsonNode> generate(String prompt, String photoBase64, String photoMime, int maxOutputTokens) {
-        if (gemini.configured()) {
-            Optional<JsonNode> first = gemini.generate(prompt, photoBase64, photoMime, maxOutputTokens);
+        if (anthropic != null && anthropic.configured()) {
+            Optional<JsonNode> first = anthropic.generate(prompt, photoBase64, photoMime, maxOutputTokens);
             if (first.isPresent()) {
                 return first;
             }
         }
-        if (anthropic != null && anthropic.configured()) {
-            return anthropic.generate(prompt, photoBase64, photoMime, maxOutputTokens);
+        if (gemini.configured()) {
+            return gemini.generate(prompt, photoBase64, photoMime, maxOutputTokens);
         }
         return Optional.empty();
     }

@@ -94,6 +94,16 @@ public class TriageService {
                                 Integer glucose, Integer painScale, String consciousness,
                                 boolean pregnant, Integer gestationWeeks, List<String> estimatedFields,
                                 Integer catalogSeverity) {
+        return calculate(age, heartRate, spo2, systolic, diastolic, temperature, respiratoryRate,
+                conditionId, history, glucose, painScale, consciousness, pregnant, gestationWeeks,
+                estimatedFields, catalogSeverity, null);
+    }
+
+    public RiskResult calculate(int age, int heartRate, int spo2, int systolic, int diastolic, BigDecimal temperature,
+                                int respiratoryRate, String conditionId, String history,
+                                Integer glucose, Integer painScale, String consciousness,
+                                boolean pregnant, Integer gestationWeeks, List<String> estimatedFields,
+                                Integer catalogSeverity, String reason) {
         validate(heartRate, spo2, systolic, diastolic, temperature, respiratoryRate);
         java.util.Set<String> estimated = estimatedFields == null ? java.util.Set.of() : new java.util.HashSet<>(estimatedFields);
         String avpu = avpu(consciousness);
