@@ -135,7 +135,7 @@ public class TriageService {
                 + shockTerm
                 + ageTerm
                 + comorb * 0.55;
-        // Piso del catálogo: pecho/paro/derrame sí. Trauma solo si el relato es choque/altura.
+        // Catalog floor: chest/arrest/stroke yes. Trauma only if the story is crash/height.
         int catalogFloor = esiFloor(condition);
         String motif = conditionId == null ? "" : conditionId;
         boolean emergencyFloor = (EMERGENCY_MOTIFS.contains(motif) || majorTrauma) && !(localInjury && !crisis);
@@ -147,7 +147,7 @@ public class TriageService {
         if (painScale != null && painScale >= 8) {
             score += 4;
         }
-        // En niños, los extremos se miden contra su edad (PEWS), no contra rangos de adulto.
+        // In children, extremes are scored against age (PEWS), not adult ranges.
         if (band != null && band.extreme(heartRate, respiratoryRate, systolic)) {
             score = Math.max(score, TriageBands.RESUSCITATION);
         }
@@ -294,7 +294,7 @@ public class TriageService {
         return "P".equals(avpu) || "U".equals(avpu) || "V".equals(avpu);
     }
 
-    /** Picadura, moretón o ojo hinchado: no es sepsis ni sala de choque. Anafilaxia (cara, silbido, no respira) sí. */
+    /** Sting, bruise or swollen eye: not sepsis and not shock room. Anaphylaxis (face, wheeze, not breathing) still is. */
     static boolean localInjury(String reason, String history) {
         String t = ((reason == null ? "" : reason) + " " + (history == null ? "" : history)).toLowerCase();
         if (t.isBlank()) {
@@ -308,7 +308,7 @@ public class TriageService {
                 || t.contains("moreton") || t.contains("moretón");
     }
 
-    /** Choque, caída de altura, politrauma. Una picadura o un moretón no entra. */
+    /** Crash, fall from height, polytrauma. A sting or bruise does not count. */
     static boolean majorMechanism(String reason, String history) {
         String t = ((reason == null ? "" : reason) + " " + (history == null ? "" : history)).toLowerCase();
         if (t.isBlank()) {
@@ -374,7 +374,7 @@ public class TriageService {
         return s;
     }
 
-    /** NEWS2 suma 3 puntos por cualquier conciencia distinta de alerta (C, V, P o U). */
+    /** NEWS2 adds 3 points for any consciousness other than alert (C, V, P or U). */
     static int consciousnessPoints(String avpu) {
         return avpu == null || "A".equals(avpu) ? 0 : 3;
     }

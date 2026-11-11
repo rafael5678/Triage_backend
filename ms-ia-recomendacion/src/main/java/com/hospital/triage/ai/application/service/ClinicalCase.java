@@ -5,7 +5,7 @@ import lombok.Builder;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Caso clínico que la IA evalúa: vitals, relato, datos opcionales y foto. */
+/** Clinical case the LLM scores: vitals, story, optional fields and photo. */
 @Builder
 public record ClinicalCase(
         String conditionId,

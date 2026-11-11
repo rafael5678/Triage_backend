@@ -78,25 +78,25 @@ public class TriageEvaluation {
     @Column(name = "espera_max_min")
     private Integer maxWaitMinutes;
 
-    /** vitals que estimó la IA en lugar de medirse, separados por coma. */
+    /** Vitals the LLM estimated instead of measuring, comma-separated. */
     @Column(name = "campos_estimados", length = 200)
     private String estimatedFields;
 
-    /** Solo la última evaluation de cada patient es current; las anteriores quedan como history. */
+    /** Only the latest evaluation per patient is current; earlier ones stay as history. */
     @Column(name = "vigente", nullable = false)
     private boolean current = true;
 
     @Column(name = "evaluado_por", length = 120)
     private String evaluatedBy;
 
-    /** Hora en que empezó esta visita; se conserva entre reevaluations para medir la wait real. */
+    /** When this visit started; kept across reassessments so wait is real. */
     @Column(name = "llegada_en")
     private OffsetDateTime arrivedAt;
 
     @Column(name = "atencion_inicio")
     private OffsetDateTime careStartedAt;
 
-    /** false: se registró pero todavía no está en la room. */
+    /** false: registered but not yet in the room. */
     @Column(name = "presente", nullable = false)
     private boolean present = true;
 

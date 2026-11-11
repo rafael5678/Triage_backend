@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** Catálogo inicial para una base vacía. after lo administra el portal de administración. */
+/** Initial catalog for an empty database. After that, administration owns it. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,7 +40,7 @@ public class DataBootstrap implements CommandLineRunner {
                 row("gi", "Diarrea, vómito o malestar", "Síntomas digestivos leves.", 18),
                 row("cura", "Herida pequeña o curación", "Corte menor o vendaje.", 8)
         ).forEach(symptoms::save);
-        log.info("Catálogo inicial de síntomas cargado");
+        log.info("Initial symptom catalog loaded");
     }
 
     private Symptom row(String id, String label, String hint, int severity) {

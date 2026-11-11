@@ -64,7 +64,7 @@ public class QueueService {
         try {
             ranked(CareStatus.EN_ESPERA);
         } catch (RuntimeException ex) {
-            log.warn("El estado ya cambió; no se pudieron recalcular puestos: {}", ex.getMessage());
+            log.warn("Status already changed; could not recompute queue places: {}", ex.getMessage());
         }
         return updated;
     }

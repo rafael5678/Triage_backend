@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Relato libre del intake; la IA lo convierte en el formulario de triaje. */
+/** Free-text intake story; the LLM turns it into the triage form. */
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,10 +25,10 @@ public class IntakeRequest {
     @Size(max = 40)
     private String photoMime;
 
-    /** Lo que el personal ya escribió en el formulario; la IA no lo reemplaza. */
+    /** What staff already typed; the LLM must not overwrite it. */
     private Map<String, Object> known;
 
-    /** Antecedentes que muestra el formulario (id y texto), para que la IA marque los mismos. */
+    /** Comorbidities shown on the form (id and label) so the LLM can tick the same ones. */
     @Builder.Default
     private List<Option> comorbidityOptions = new ArrayList<>();
 

@@ -64,13 +64,13 @@ public class QueueController {
         return insights.stats();
     }
 
-    /** Pantalla pública de room: sin nombres ni documento completo. */
+    /** Public waiting-room screen: no names and no full document. */
     @GetMapping({"/board", "/tablero"})
     public List<BoardEntryDTO> board() {
         return insights.board();
     }
 
-    /** Eventos en vivo: cada pantalla recibe "cambio" y vuelve a pedir sus datos. */
+    /** Live events: each screen receives "cambio" and reloads its data. */
     @GetMapping(value = {"/events", "/eventos"}, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter events() {
         return events.subscribe();
@@ -87,13 +87,13 @@ public class QueueController {
         return changed(queueService.updateStatus(patientId, status));
     }
 
-    /** present=false: se registró pero todavía no está en la room. */
+    /** present=false: registered but not yet in the room. */
     @PatchMapping({"/care/{patientId}/presence", "/atender/{patientId}/presencia"})
     public RankedPatientDTO presence(@PathVariable("patientId") UUID patientId, @RequestParam("present") boolean present) {
         return changed(queueService.setPresence(patientId, present));
     }
 
-    /** El personal avisó al patient (por ejemplo, con el botón de WhatsApp de la app). */
+    /** Staff notified the patient (for example with the in-app WhatsApp button). */
     @PostMapping({"/care/{patientId}/notified", "/atender/{patientId}/avisado"})
     public RankedPatientDTO notified(@PathVariable("patientId") UUID patientId,
                                      @RequestParam(value = "channel", defaultValue = "MANUAL") String channel) {

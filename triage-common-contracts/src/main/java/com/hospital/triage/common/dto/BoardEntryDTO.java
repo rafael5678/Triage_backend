@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
-/** Fila de la pantalla pública de room: sin nombre ni documento completo. */
+/** Row of the public waiting-room screen: no name and no full document. */
 @Data
 @Builder
 @NoArgsConstructor

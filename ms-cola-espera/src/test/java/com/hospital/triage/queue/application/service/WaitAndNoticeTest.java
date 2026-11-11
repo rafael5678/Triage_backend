@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Reloj de wait, orden de la fila y cuándo se avisa por WhatsApp. */
+/** Wait clock, queue order and when WhatsApp notices fire. */
 class WaitAndNoticeTest {
 
     private final OffsetDateTime now = OffsetDateTime.parse("2026-10-28T10:00:00-05:00");

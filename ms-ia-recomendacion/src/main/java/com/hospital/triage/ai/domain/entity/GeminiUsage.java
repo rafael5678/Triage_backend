@@ -10,7 +10,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
-/** Llamadas a Gemini hechas por día (zona America/Bogota). */
+/** Gemini calls made per day (America/Bogota). */
 @Getter
 @Setter
 @NoArgsConstructor

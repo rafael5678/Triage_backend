@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Convierte el relato (y la foto) del intake en el formulario de triaje. */
+/** Turns the intake story (and photo) into the triage form. */
 @Service
 public class IntakeService {
 
@@ -147,7 +147,7 @@ public class IntakeService {
                 .notes(GeminiClient.texts(a.path("notes"), 5));
 
         IntakeSuggestion s = b.build();
-        // Si Gemini inventó un signo (lo marcó estimado y nadie lo escribió), se descarta.
+        // Drop a vital the LLM invented (marked estimated and nobody typed it).
         s.setHeartRate(keepVital(s.getHeartRate(), "heartRate", known, estimated));
         s.setSpo2(keepVital(s.getSpo2(), "spo2", known, estimated));
         s.setSystolic(keepVital(s.getSystolic(), "systolic", known, estimated));

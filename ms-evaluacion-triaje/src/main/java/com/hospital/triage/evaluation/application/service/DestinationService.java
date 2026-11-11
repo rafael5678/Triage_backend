@@ -34,7 +34,7 @@ public class DestinationService {
         return decide(level, conditionId, age, aiSuggestedArea, false, null, 0, 0);
     }
 
-    /** Con embarazo, la presión muy alta o el sangrado activan un código obstétrico propio. */
+    /** Pregnancy: very high blood pressure or bleeding activate an obstetric code. */
     public Destination decide(TriageLevel level, String conditionId, Integer age, String aiSuggestedArea,
                               boolean pregnant, Integer gestationWeeks, int systolic, int diastolic) {
         return decide(level, conditionId, age, aiSuggestedArea, pregnant, gestationWeeks, systolic, diastolic, null);

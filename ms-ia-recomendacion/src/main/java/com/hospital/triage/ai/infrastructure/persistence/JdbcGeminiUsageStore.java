@@ -9,7 +9,7 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Suma atómica en Postgres: dos réplicas que llamen a la vez no se saltan el tope. */
+/** Atomic increment in Postgres: two replicas calling at once cannot skip the cap. */
 @Component
 @RequiredArgsConstructor
 public class JdbcGeminiUsageStore implements GeminiUsageStore {

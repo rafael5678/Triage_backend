@@ -49,7 +49,7 @@ public class PatientLookupGrpcService extends PatientLookupGrpc.PatientLookupImp
             try {
                 builder.addPatients(toView(patients.findById(id)));
             } catch (PatientNotFoundException ignored) {
-                // Un id desconocido no tumba la consulta de la queue.
+                // An unknown id must not crash the queue lookup.
             }
         }
         responseObserver.onNext(builder.build());

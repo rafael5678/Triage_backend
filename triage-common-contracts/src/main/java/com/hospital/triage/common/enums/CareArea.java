@@ -1,6 +1,6 @@
 package com.hospital.triage.common.enums;
 
-/** Área de urgencias a la que se envía al patient, de la más a la menos urgente. */
+/** Emergency area the patient is sent to, most urgent first. Labels stay Spanish for the staff UI. */
 public enum CareArea {
     REANIMACION("Reanimación (sala de choque)", 0),
     URGENCIAS_CRITICAS("Urgencias críticas y observación", 10),
@@ -24,7 +24,7 @@ public enum CareArea {
         return maxWaitMinutes;
     }
 
-    /** Más urgente que otra área (REANIMACION es la más urgente). */
+    /** More urgent than another area (REANIMACION is the most urgent). */
     public boolean moreUrgentThan(CareArea other) {
         return other == null || ordinal() < other.ordinal();
     }

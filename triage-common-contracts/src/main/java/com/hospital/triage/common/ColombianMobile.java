@@ -11,7 +11,7 @@ public final class ColombianMobile {
     private ColombianMobile() {
     }
 
-    /** null si viene vacío; si hay texto, tiene que ser válido o lanza. */
+    /** null if blank; if there is text it must be valid or this throws. */
     public static String normalize(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;

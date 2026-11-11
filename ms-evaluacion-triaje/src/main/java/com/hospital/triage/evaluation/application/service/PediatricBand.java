@@ -1,8 +1,8 @@
 package com.hospital.triage.evaluation.application.service;
 
 /**
- * Rangos normales de vitals vitales por edad (referencia pediátrica tipo PEWS/PALS).
- * Cada signo suma 0 si está en rango y hasta 3 according to cuánto se aleja, en la misma escala que NEWS2.
+ * Age-normal vital ranges (PEWS/PALS-style pediatric reference).
+ * Each sign scores 0 in range and up to 3 the farther it is, on the same scale as NEWS2.
  */
 record PediatricBand(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin) {
 
@@ -29,7 +29,7 @@ record PediatricBand(int hrMin, int hrMax, int rrMin, int rrMax, int sbpMin) {
         return s;
     }
 
-    /** vitals tan alejados de lo normal para la edad que el niño necesita reanimación. */
+    /** Vitals so far from age-normal that the child needs resuscitation. */
     boolean extreme(int hr, int rr, int sbp) {
         return hr > hrMax * 1.3 || hr < hrMin * 0.7 || rr > rrMax * 1.5 || rr < rrMin * 0.5 || sbp < sbpMin - 10;
     }

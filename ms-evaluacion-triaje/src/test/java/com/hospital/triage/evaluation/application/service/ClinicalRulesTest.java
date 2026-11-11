@@ -10,7 +10,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Reglas para niños (rangos por edad) y embarazadas (códigos obstétricos). */
+/** Rules for children (age ranges) and pregnancy (obstetric codes). */
 class ClinicalRulesTest {
 
     private final TriageService triage = new TriageService(id -> Optional.empty());

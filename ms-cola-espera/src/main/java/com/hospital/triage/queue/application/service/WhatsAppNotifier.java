@@ -49,18 +49,18 @@ public class WhatsAppNotifier {
     @Value("${app.whatsapp.phone-number-id:}")
     private String phoneNumberId;
 
-    /** Plantilla aprobada en Meta; sin ella se envía texto libre (solo llega si el patient escribió en las últimas 24 h). */
+    /** Meta-approved template; without it free text is sent (only delivered if the patient wrote in the last 24 h). */
     @Value("${app.whatsapp.template:}")
     private String template;
 
     @Value("${app.whatsapp.template-language:es}")
     private String templateLanguage;
 
-    /** Avisar when falten estos minutos para el tiempo máximo… */
+    /** Notify when this many minutes remain before the protocol max… */
     @Value("${app.whatsapp.lead-minutes:10}")
     private int leadMinutes = 10;
 
-    /** …o cuando quede entre los primeros de la fila. */
+    /** …or when they are among the first in line. */
     @Value("${app.whatsapp.position-lead:2}")
     private int positionLead = 2;
 
@@ -73,7 +73,7 @@ public class WhatsAppNotifier {
         return token != null && !token.isBlank() && phoneNumberId != null && !phoneNumberId.isBlank();
     }
 
-    /** Lanza la revisión en segundo plano para no demorar la respuesta de la queue. */
+    /** Run the check in the background so the queue response is not delayed. */
     public void checkAsync(List<RankedPatientDTO> rankedWaiting) {
         if (!automatic()) {
             return;
@@ -101,7 +101,7 @@ public class WhatsAppNotifier {
                     sent++;
                 }
             } catch (Exception ex) {
-                log.warn("No se pudo avisar por WhatsApp a {}: {}", p.getPatientId(), ex.getMessage());
+                log.warn("Could not send WhatsApp notice to {}: {}", p.getPatientId(), ex.getMessage());
             }
         }
         return sent;
@@ -119,7 +119,7 @@ public class WhatsAppNotifier {
         return timeAlmostUp || nearTheFront;
     }
 
-    /** Texto del notice; el frontend arma el mismo para el botón manual. */
+    /** Notice text; the frontend builds the same string for the manual button. */
     static String message(RankedPatientDTO p) {
         String name = firstName(p.getName());
         String ticket = TurnTicket.of(p.getName(), p.getDocument());
@@ -164,7 +164,7 @@ public class WhatsAppNotifier {
                 .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
-            log.warn("WhatsApp respondió {}: {}", response.statusCode(), response.body());
+            log.warn("WhatsApp responded {}: {}", response.statusCode(), response.body());
             return false;
         }
         return true;

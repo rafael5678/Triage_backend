@@ -5,7 +5,7 @@ import com.hospital.triage.common.dto.FieldExplanation;
 import com.hospital.triage.common.dto.FieldExplanationRequest;
 import org.springframework.stereotype.Service;
 
-/** Explica en palabras simples un dato del formulario (qué es, cómo se mide y qué significa el valor). */
+/** Explains a form field in plain words (what it is, how it is measured, what the value means). */
 @Service
 public class FieldExplainer {
 

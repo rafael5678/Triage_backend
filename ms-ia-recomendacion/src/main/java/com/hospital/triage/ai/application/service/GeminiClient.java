@@ -70,26 +70,26 @@ public class GeminiClient {
     private LocalDate day;
     private int usedToday;
 
-    /** Sin almacén: el conteo diario vive en memoria (pruebas). */
+    /** No store: daily count lives in memory (tests). */
     public GeminiClient(ObjectMapper json) {
         this(json, null);
     }
 
-    /** Con almacén: el conteo diario está en la base y sobrevive a que Azure duerma el servicio. */
+    /** With a store: daily count is in the database and survives Azure sleep. */
     @org.springframework.beans.factory.annotation.Autowired
     public GeminiClient(ObjectMapper json, GeminiUsageStore usage) {
         this.json = json;
         this.usage = usage;
     }
 
-    /** Llamadas reales a Gemini hechas hoy (las que salieron de memoria no cuentan). */
+    /** Real Gemini calls made today (cache hits do not count). */
     public synchronized int usedToday() {
         rollDay();
         if (usage != null) {
             try {
                 return usage.get(day);
             } catch (Exception ex) {
-                log.warn("No se pudo leer el uso de Gemini en la base: {}", ex.getMessage());
+                log.warn("Could not read Gemini usage from the database: {}", ex.getMessage());
             }
         }
         return usedToday;
@@ -124,7 +124,7 @@ public class GeminiClient {
             payload.set("contents", json.createArrayNode().add(content));
             var gen = json.createObjectNode();
             gen.put("temperature", 0.15);
-            // Los modelos Gemini 3 gastan tokens de salida pensando; con pocos tokens la respuesta llega cortada.
+            // Gemini 3 spends output tokens thinking; too few tokens truncates the JSON.
             gen.put("maxOutputTokens", maxOutputTokens);
             gen.put("responseMimeType", "application/json");
             payload.set("generationConfig", gen);
@@ -138,7 +138,7 @@ public class GeminiClient {
             HttpResponse<String> res = null;
             for (String candidate : models()) {
                 if (!takeQuota()) {
-                    log.warn("Tope de llamadas a Gemini alcanzado ({} por día, {} por minuto); se usa solo el protocolo",
+                    log.warn("Gemini call cap reached ({} per day, {} per minute); protocol only",
                             dailyLimit, perMinuteLimit);
                     break;
                 }
@@ -170,19 +170,19 @@ public class GeminiClient {
                 }
             }
             if (text.isBlank()) {
-                log.warn("Gemini respondió sin texto: {}", root.path("candidates").path(0).path("finishReason").asText(""));
+                log.warn("Gemini replied with no text: {}", root.path("candidates").path(0).path("finishReason").asText(""));
                 return Optional.empty();
             }
             JsonNode parsed = json.readTree(stripFence(text));
             remember(key, parsed);
             return Optional.of(parsed);
         } catch (Exception ex) {
-            log.warn("Gemini no disponible: {}", ex.getMessage());
+            log.warn("Gemini unavailable: {}", ex.getMessage());
             return Optional.empty();
         }
     }
 
-    /** GEMINI_MODEL admite varios modelos separados por coma; si uno está saturado se prueba el siguiente (máximo 2). */
+    /** GEMINI_MODEL may list several models comma-separated; if one is busy the next is tried (max 2). */
     private List<String> models() {
         List<String> out = new ArrayList<>();
         if (model != null) {
@@ -231,8 +231,8 @@ public class GeminiClient {
                     return false;
                 }
             } catch (Exception ex) {
-                // Si la base no responde se sigue con el conteo en memoria.
-                log.warn("No se pudo registrar el uso de Gemini en la base: {}", ex.getMessage());
+                // If the database does not answer, keep counting in memory.
+                log.warn("Could not persist Gemini usage: {}", ex.getMessage());
                 usedToday++;
             }
         } else {
