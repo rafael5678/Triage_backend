@@ -300,4 +300,17 @@ class TriageServiceTest {
         assertThat(bee.score()).isLessThan(BigDecimal.valueOf(50.0));
         assertThat(bee.level()).isNotEqualTo(TriageLevel.TRIAGE_I_ROJO);
     }
+
+    @Test
+    @DisplayName("Picadura con menú de sepsis y signos normales no va a reanimación")
+    void picaduraNoEsSepsisPorElMenu() {
+        TriageService withCatalog = new TriageService(id -> Optional.of(80));
+        TriageService.RiskResult bee = withCatalog.calculate(
+                32, 78, 98, 118, 76, BigDecimal.valueOf(36.6), 16, "sepsis", "",
+                null, 4, "A", true, 2, List.of("heartRate", "spo2", "systolic", "diastolic", "temperature", "respiratoryRate"),
+                80, "señora de 32 años tiene una picadura en los ojos por una abeja"
+        );
+        assertThat(bee.score()).isLessThan(BigDecimal.valueOf(50.0));
+        assertThat(bee.level()).isNotEqualTo(TriageLevel.TRIAGE_I_ROJO);
+    }
 }

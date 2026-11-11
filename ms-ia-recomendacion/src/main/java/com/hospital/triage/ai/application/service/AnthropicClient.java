@@ -78,14 +78,13 @@ public class AnthropicClient {
                     : (model == null || model.isBlank() ? "claude-haiku-5-5" : model.trim());
             payload.put("model", chosen);
             payload.put("max_tokens", maxTokens);
-            payload.put("temperature", 0.1);
             payload.put("system", image != null
                     ? "Eres médico de triage. PRIMERO mira la foto (lesiones, color, hinchazón, necrosis, sangrado). LUEGO el relato. LUEGO los signos. El menú del formulario no es el puntaje. Responde SOLO el JSON pedido."
                     : "Responde SOLO un JSON válido con el esquema que pide el mensaje del usuario. Sin markdown.");
             payload.set("messages", json.createArrayNode().add(user));
 
             HttpRequest req = HttpRequest.newBuilder(MESSAGES)
-                    .timeout(image != null ? Duration.ofSeconds(70) : Duration.ofSeconds(20))
+                    .timeout(image != null ? Duration.ofSeconds(70) : Duration.ofSeconds(45))
                     .header("Content-Type", "application/json")
                     .header("x-api-key", apiKey.trim())
                     .header("anthropic-version", "2023-06-01")

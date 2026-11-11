@@ -159,7 +159,7 @@ public class EvaluationService {
             AiAssistDTO ia = AiAssistDTO.builder().active(false).protocolScore(protocol.score().doubleValue()).build();
             var result = triageService.merge(protocol, ia, extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty());
             var destination = destinations.decide(result.level(), conditionId, age, null,
-                    pregnant, gestationWeeks, systolic, diastolic);
+                    pregnant, gestationWeeks, systolic, diastolic, reason);
             return new Scored(result, ia, destination);
         }
         AiAssistDTO ia = clinicalAi.assist(AssistInput.builder()
@@ -192,7 +192,7 @@ public class EvaluationService {
         boolean vitalsEstimated = extra.getEstimatedFields() != null && !extra.getEstimatedFields().isEmpty();
         var result = triageService.merge(protocol, ia, vitalsEstimated);
         var destination = destinations.decide(result.level(), conditionId, age, ia.getSuggestedArea(),
-                pregnant, gestationWeeks, systolic, diastolic);
+                pregnant, gestationWeeks, systolic, diastolic, reason);
         return new Scored(result, ia, destination);
     }
 

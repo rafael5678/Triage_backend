@@ -37,11 +37,19 @@ public class DestinationService {
     /** Con embarazo, la presión muy alta o el sangrado activan un código obstétrico propio. */
     public Destination decide(TriageLevel level, String conditionId, Integer age, String aiSuggestedArea,
                               boolean pregnant, Integer gestationWeeks, int systolic, int diastolic) {
+        return decide(level, conditionId, age, aiSuggestedArea, pregnant, gestationWeeks, systolic, diastolic, null);
+    }
+
+    public Destination decide(TriageLevel level, String conditionId, Integer age, String aiSuggestedArea,
+                              boolean pregnant, Integer gestationWeeks, int systolic, int diastolic, String story) {
         CareArea area = CareArea.fromLevel(level);
         StringBuilder reason = new StringBuilder("Nivel de triaje: ").append(area.label());
         String code = null;
 
         Code special = conditionId == null ? null : CODES.get(conditionId);
+        if (TriageService.localInjury(story, null)) {
+            special = null;
+        }
         if (pregnant) {
             Code obstetric = obstetricCode(conditionId, gestationWeeks, systolic, diastolic);
             if (obstetric != null) {

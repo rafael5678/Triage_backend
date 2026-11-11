@@ -40,7 +40,7 @@ public class GeminiClient {
     private static final int CACHE_SIZE = 200;
     private static final ZoneId ZONE = ZoneId.of("America/Bogota");
 
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private final ObjectMapper json;
     private Clock clock = Clock.systemUTC();
 
@@ -144,7 +144,7 @@ public class GeminiClient {
                 }
                 String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidate + ":generateContent";
                 HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                        .timeout(image != null ? Duration.ofSeconds(8) : Duration.ofSeconds(5))
+                        .timeout(image != null ? Duration.ofSeconds(40) : Duration.ofSeconds(20))
                         .header("Content-Type", "application/json")
                         .header("x-goog-api-key", apiKey.trim())
                         .POST(HttpRequest.BodyPublishers.ofString(body))

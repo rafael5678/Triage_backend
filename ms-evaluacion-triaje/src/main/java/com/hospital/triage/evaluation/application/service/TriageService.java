@@ -120,7 +120,8 @@ public class TriageService {
         int condition = conditionSeverity(conditionId, catalogSeverity);
         boolean crisis = measuredCrisis(estimated, spo2Score, heartRate, systolic, temperature, avpu, band);
         boolean majorTrauma = "trauma".equals(conditionId) && majorMechanism(reason, history);
-        if ("trauma".equals(conditionId) && !majorTrauma && !crisis) {
+        boolean localInjury = localInjury(reason, history);
+        if ((("trauma".equals(conditionId) && !majorTrauma) || localInjury) && !crisis) {
             condition = Math.min(condition, 38);
         }
         int comorb = scoreHistory(history);
@@ -137,7 +138,7 @@ public class TriageService {
         // Piso del catálogo: pecho/paro/derrame sí. Trauma solo si el relato es choque/altura.
         int catalogFloor = esiFloor(condition);
         String motif = conditionId == null ? "" : conditionId;
-        boolean emergencyFloor = EMERGENCY_MOTIFS.contains(motif) || majorTrauma;
+        boolean emergencyFloor = (EMERGENCY_MOTIFS.contains(motif) || majorTrauma) && !(localInjury && !crisis);
         if (!emergencyFloor && !crisis) {
             catalogFloor = 0;
         }
@@ -291,6 +292,20 @@ public class TriageService {
             }
         }
         return "P".equals(avpu) || "U".equals(avpu) || "V".equals(avpu);
+    }
+
+    /** Picadura, moretón o ojo hinchado: no es sepsis ni sala de choque. Anafilaxia (cara, silbido, no respira) sí. */
+    static boolean localInjury(String reason, String history) {
+        String t = ((reason == null ? "" : reason) + " " + (history == null ? "" : history)).toLowerCase();
+        if (t.isBlank()) {
+            return false;
+        }
+        if (t.contains("no respira") || t.contains("sibilanc") || t.contains("hinchazón de cara")
+                || t.contains("hinchazon de cara") || t.contains("lengua hinch") || t.contains("no responde")) {
+            return false;
+        }
+        return t.contains("picadura") || t.contains("abeja") || t.contains("avispa")
+                || t.contains("moreton") || t.contains("moretón");
     }
 
     /** Choque, caída de altura, politrauma. Una picadura o un moretón no entra. */

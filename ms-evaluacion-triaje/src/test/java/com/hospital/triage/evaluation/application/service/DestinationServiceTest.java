@@ -59,4 +59,15 @@ class DestinationServiceTest {
         assertThat(destinations.decide(TriageLevel.TRIAGE_IV_VERDE, "fiebre", 8, null).code()).isEqualTo("Pediatría");
         assertThat(destinations.decide(TriageLevel.TRIAGE_II_NARANJA, "trauma", 10, null).code()).isEqualTo("Código trauma · Pediatría");
     }
+
+    @Test
+    @DisplayName("Una picadura no dispara código sepsis aunque el menú lo diga")
+    void picaduraNoCodigoSepsis() {
+        var d = destinations.decide(
+                TriageLevel.TRIAGE_IV_VERDE, "sepsis", 32, null, true, 2, 118, 76,
+                "picadura en los ojos por una abeja");
+        assertThat(d.code()).doesNotContain("sepsis");
+        assertThat(d.area()).isNotEqualTo(CareArea.REANIMACION);
+        assertThat(d.area()).isNotEqualTo(CareArea.URGENCIAS_CRITICAS);
+    }
 }
