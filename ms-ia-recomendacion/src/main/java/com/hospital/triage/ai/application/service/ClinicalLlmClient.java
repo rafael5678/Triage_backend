@@ -37,6 +37,13 @@ public class ClinicalLlmClient {
         return "inactive";
     }
 
+    public String lastError() {
+        if (anthropic != null && anthropic.lastError() != null && !anthropic.lastError().isBlank()) {
+            return anthropic.lastError();
+        }
+        return "";
+    }
+
     public Optional<JsonNode> generate(String prompt, String photoBase64, String photoMime, int maxOutputTokens) {
         return generate(prompt, photoBase64, photoMime, maxOutputTokens, null);
     }

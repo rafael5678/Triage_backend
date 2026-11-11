@@ -40,8 +40,14 @@ public class AnthropicClient {
         this.json = json;
     }
 
+    private volatile String lastError = "";
+
     public boolean configured() {
         return apiKey != null && !apiKey.isBlank();
+    }
+
+    public String lastError() {
+        return lastError == null ? "" : lastError;
     }
 
     public Optional<JsonNode> generate(String prompt, String photoBase64, String photoMime, int maxOutputTokens) {
@@ -87,7 +93,8 @@ public class AnthropicClient {
                     .build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (res.statusCode() >= 400) {
-                log.warn("Anthropic {} HTTP {}: {}", chosen, res.statusCode(), res.body());
+                lastError = "Anthropic " + chosen + " HTTP " + res.statusCode() + ": " + trimBody(res.body());
+                log.warn("{}", lastError);
                 if (image != null && visionModel != null && chosen.equals(visionModel.trim())
                         && model != null && !model.isBlank() && !chosen.equals(model.trim())) {
                     payload.put("model", model.trim());
@@ -100,7 +107,8 @@ public class AnthropicClient {
                             .build();
                     res = http.send(retry, HttpResponse.BodyHandlers.ofString());
                     if (res.statusCode() >= 400) {
-                        log.warn("Anthropic fallback {} HTTP {}: {}", model, res.statusCode(), res.body());
+                        lastError = "Anthropic fallback " + model + " HTTP " + res.statusCode() + ": " + trimBody(res.body());
+                        log.warn("{}", lastError);
                         return Optional.empty();
                     }
                 } else {
@@ -116,14 +124,25 @@ public class AnthropicClient {
                 }
             }
             if (text.isBlank()) {
-                log.warn("Anthropic Haiku replied without text");
+                lastError = "Anthropic replied without text";
+                log.warn("{}", lastError);
                 return Optional.empty();
             }
+            lastError = "";
             return Optional.of(json.readTree(extractJson(text)));
         } catch (Exception ex) {
-            log.warn("Anthropic Haiku unavailable: {}", ex.getMessage());
+            lastError = "Anthropic unavailable: " + ex.getMessage();
+            log.warn("{}", lastError);
             return Optional.empty();
         }
+    }
+
+    private static String trimBody(String body) {
+        if (body == null) {
+            return "";
+        }
+        String t = body.replaceAll("\\s+", " ").trim();
+        return t.length() > 280 ? t.substring(0, 280) : t;
     }
 
     private static String extractJson(String text) {

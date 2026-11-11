@@ -53,9 +53,44 @@ public class IntakeService {
                 hasPhoto ? 1200 : 800,
                 IntakeService::looksLikeIntake);
         if (answer.isEmpty()) {
-            return IntakeSuggestion.builder().active(false).build();
+            IntakeSuggestion fallback = fromStory(request.getStory());
+            fallback.setNotes(List.of(
+                    llm.lastError().isBlank()
+                            ? "La IA no contestó. Se armó el formulario con el relato; tome los signos a mano."
+                            : "IA: " + llm.lastError()));
+            return fallback;
         }
         return normalize(answer.get(), catalog, request, known, hasPhoto);
+    }
+
+    static IntakeSuggestion fromStory(String story) {
+        String t = story == null ? "" : story.toLowerCase();
+        String conditionId = "cura";
+        if (t.contains("no responde") || t.contains("desmay")) {
+            conditionId = "paro";
+        } else if (t.contains("derrame") || t.contains("boca torcida") || t.contains("no habla")) {
+            conditionId = "avc";
+        } else if (t.contains("pecho")) {
+            conditionId = "sca";
+        } else if (t.contains("picadura") || t.contains("abeja") || t.contains("avispa") || t.contains("ojo")) {
+            conditionId = "cura";
+        } else if (t.contains("choque") || t.contains("altura")) {
+            conditionId = "trauma";
+        }
+        Integer age = null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{1,3})\\s*años").matcher(t);
+        if (m.find()) {
+            age = Integer.parseInt(m.group(1));
+        }
+        String sex = t.contains("señora") || t.contains("mujer") || t.contains("embaraz") ? "F"
+                : (t.contains("señor") || t.contains("hombre") ? "M" : null);
+        return IntakeSuggestion.builder()
+                .active(true)
+                .conditionId(conditionId)
+                .reason(story == null ? "" : story.substring(0, Math.min(200, story.length())))
+                .age(age)
+                .sex(sex)
+                .build();
     }
 
     static boolean looksLikeIntake(JsonNode node) {

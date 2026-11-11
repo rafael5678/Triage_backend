@@ -45,7 +45,8 @@ public class AiController {
                 "port", "8084",
                 "ai", llm.providerLabel(),
                 "geminiHoy", geminiClient.usedToday(),
-                "geminiTopeDiario", dailyLimit
+                "geminiTopeDiario", dailyLimit,
+                "lastError", llm.lastError()
         );
     }
 
