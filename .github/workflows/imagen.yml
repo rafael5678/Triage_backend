@@ -41,4 +41,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/rafael5678/triage-backend:latest
+          tags: |
+            ghcr.io/rafael5678/triage-backend:latest
+            ghcr.io/rafael5678/triage-backend:${{ github.sha }}
